@@ -30,6 +30,7 @@ git remote -v
 ```
 
 4. Create a Feature Branch
+
 Make sure you are on the default branch:
 
 ```bash
@@ -122,4 +123,3 @@ def add(a, b):
     sum = a + b
     return sum
 ```
-
