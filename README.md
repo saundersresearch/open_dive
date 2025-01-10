@@ -3,6 +3,8 @@ OpenDIVE (Open Diffusion Imaging Visualization for Everyone) is a command line i
 
 The team will write documentation at the event. Installation and usage details will be available after 1/26/2025.
 
+For FAQs related to diffusion MRI, see our diffusion FAQ issue (#4).
+
 ## Installation
 
 TBD
