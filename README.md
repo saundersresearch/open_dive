@@ -1,7 +1,7 @@
 # OpenDIVE - BrainHack Vandy 2025
 OpenDIVE (Open Diffusion Imaging Visualization for Everyone) is a command line interface tool for generating accessible, interpretable visualizations from diffusion MRI.
 
-[embed][https://github.com/MASILab/open_dive/blob/main/OpenDIVE_%20Open%20Diffusion%20Imaging%20Visualization%20for%20Everyone.pdf][/embed]
+![Project description](https://github.com/MASILab/open_dive/blob/main/info_img.jpg)
 
 The team will write documentation at the event. Installation and usage details will be available after 1/26/2025.
 
