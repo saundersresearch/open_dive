@@ -3,7 +3,7 @@ name = "open-dive"
 version = "0.1.0"
 description = "OpenDIVE (Open Diffusion Imaging Visualization for Everyone) is a command line interface tool for generating accessible, interpretable visualizations from diffusion MRI."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
     "dipy>=1.10.0",
     "fury>=0.11.0",
