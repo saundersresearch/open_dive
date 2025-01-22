@@ -1,11 +1,28 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "open-dive"
 version = "0.1.0"
 description = "OpenDIVE (Open Diffusion Imaging Visualization for Everyone) is a command line interface tool for generating accessible, interpretable visualizations from diffusion MRI."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 dependencies = [
     "dipy>=1.10.0",
     "fury>=0.11.0",
 ]
+maintainers = [
+    {name = "Adam Saunders", email = "adam.m.saunders@vanderbilt.edu"},
+    {name = "Elyssa McMaster", email = "elyssa.m.mcmaster@vanderbilt.edu"}
+]
+keywords = ["diffusion MRI", "visualization", "medical imaging"]
 classifiers = ["Private :: Do Not Upload"]
+
+[project.urls]
+Repository = "https://github.com/MASILab/open_dive"
+Issues = "https://github.com/MASILab/open_dive/issues"
+
+
+[project.scripts]
+nifti2png = "open_dive.scripts.nifti2png:main"
