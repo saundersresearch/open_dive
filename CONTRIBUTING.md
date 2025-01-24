@@ -78,13 +78,17 @@ Be ready to respond to any comments or requested changes from the maintainers. M
 
 ## Installing OpenDIVE
 
+It is highly recommended that you work within a virtual environment to isolate your packages from other Python installations on your system.
+
+### Using `uv` (recommended)
+
 We recommend installing Python via `uv`. See instructions [here](https://docs.astral.sh/uv/getting-started/installation/). This will allow you to create a virtual environment that ensures we are all working with the same package versions.
 
-Once you have `uv` installed and have a local clone of the repository, you can create the virtual environment by running the following command while in the directory containing your repository to install the necessary packages:
+Once you have `uv` installed and have a local clone of the repository, you can create the virtual environment by running the following command:
 
 ```bash
 uv sync 
-uv pip install -e .
+uv pip install -e </path/to/open_dive>
 ```
 
 Then, you can run code using the `uv` command:
@@ -93,12 +97,23 @@ Then, you can run code using the `uv` command:
 uv run <file>
 ```
 
-Alternatively, if you would rather use the `python` command, you can activate the virtual environment after syncing:
+Alternatively, if you would rather use the `python` command, you can activate the virtual environment after syncing from within the `open_dive/` folder:
 
 ```bash
 source .venv/bin/activate
 python <file>
 ```
+
+### Using `conda` or `mamba`
+
+If you already are using `conda` or `mamba` on your machine, you can set up a virtual environment for `open-dive`:
+
+```bash
+conda create -n open-dive python=3.12
+conda activate open-dive
+pip install -e </path/to/open_dive>
+```
+
 
 ## Coding guidelines
 We ask that all code is well-commented. Please add `numpydoc`-style docstrings to document your functions and classes. For example, if you create code to add two numbers:
