@@ -61,13 +61,13 @@ def plot_nifti(
         )
 
     # Get the data and affine
-    data = nifti.get_fdata()
     affine = nifti.affine
 
     if radiological and orientation == "axial":
         data = np.flip(data, axis=0)
 
     # Set up slicer and window
+    print(data.shape)
     slice_actor = slicer(data, affine=affine, **kwargs)
     scene = window.Scene()
     scene.add(slice_actor)
