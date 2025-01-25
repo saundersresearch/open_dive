@@ -7,6 +7,7 @@ Thank you for your interest in contributing to OpenDIVE!
 Navigate to the main repository on GitHub. Click the Fork button in the upper-right corner of the repository page. This will create a copy of the repository under your GitHub account.
 
 2. Clone the fork
+
 Open a terminal and clone the repository to your machine:
 ```bash
 git clone https://github.com/<your-username>/open_dive.git
@@ -75,6 +76,8 @@ Fill out the pull request form with a clear title and description of your change
 8. Respond to Feedback
 
 Be ready to respond to any comments or requested changes from the maintainers. Make additional commits to your branch to address feedback, and push them to your fork. The pull request will update automatically.
+
+For future contributions, you can repeat the instructions from step 4.
 
 ## Installing OpenDIVE
 
