@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 
-from ..viz import plot_nifti
+from open_dive.viz import plot_nifti
 
 
 def main():
@@ -33,6 +33,11 @@ def main():
         help="Optional value range to pass to slicer. Default is min/max of image.",
     )
     parser.add_argument(
+        "--volume_idx",
+        type=int,
+        help="Index of the volume to display if the image is 4D",
+    )
+    parser.add_argument(
         "--interpolation",
         default="nearest",
         help="Interpolation method to use (nearest or linear). Default is 'nearest'.",
@@ -51,6 +56,7 @@ def main():
         data_slice=args.slice,
         orientation=args.orientation,
         size=args.size,
+        volume_idx=args.volume_idx,
         radiological=not args.not_radiological,
         save_path=args.save_path,
         interactive=args.interactive,
