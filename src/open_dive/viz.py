@@ -67,7 +67,6 @@ def plot_nifti(
         data = np.flip(data, axis=0)
 
     # Set up slicer and window
-    print(data.shape)
     slice_actor = slicer(data, affine=affine, **kwargs)
     scene = window.Scene()
     scene.add(slice_actor)
