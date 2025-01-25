@@ -1,7 +1,10 @@
 import nibabel as nib
 import numpy as np
-from dipy.viz import window
+from dipy.viz import window, actor
 from fury.actor import slicer
+from fury.colormap import colormap_lookup_table
+import vtk
+import pdb 
 
 
 def plot_nifti(
@@ -9,9 +12,12 @@ def plot_nifti(
     data_slice="m",
     orientation="axial",
     size=(600, 400),
+    value_range=None,
     radiological=True,
     save_path=None,
     interactive=True,
+    scalar_colorbar=True,
+    tractography=None,
     volume_idx=None,
     **kwargs,
 ):
@@ -33,6 +39,8 @@ def plot_nifti(
         Optional path to save to, by default None
     interactive : bool, optional
         Whether to interactively show the scene, by default True
+    colorbar : bool, optional
+        Whether to show a scalar colorbar (for FA, T1, etc.), by default True
     volume_idx : int, optional
         Index of the volume to display if the image is 4D, by default None
     **kwargs
@@ -63,11 +71,18 @@ def plot_nifti(
     # Get the data and affine
     affine = nifti.affine
 
+    # value range
+    if value_range is None:
+        value_range = [np.min(data), np.max(data)]
+    else:
+        value_range = [value_range[0], value_range[1]]
+
+
     if radiological and orientation == "axial":
         data = np.flip(data, axis=0)
 
     # Set up slicer and window
-    slice_actor = slicer(data, affine=affine, **kwargs)
+    slice_actor = slicer(data, affine=affine, value_range=value_range, **kwargs)
     scene = window.Scene()
     scene.add(slice_actor)
 
@@ -98,6 +113,44 @@ def plot_nifti(
         camera_up = (0, 0, 1)
     camera_focal = (0, 0, 0)
 
+    # Apply colorbar
+    if scalar_colorbar:
+        # Create a grayscale colormap (from black to white)
+        lut = vtk.vtkLookupTable()
+        lut.SetNumberOfTableValues(256)  # Full grayscale (256 levels)
+        lut.Build()  # Initialize the LUT
+        
+        
+        for i in range(256):
+            lut.SetTableValue(i, i / 255.0, i / 255.0, i / 255.0, 1)  # Grayscale colors
+        '''
+        We can further optimize this later to support orther colormaps; this just supports grayscale right now.
+        '''
+        # Set the full grayscale range (e.g., 0 to 255 for typical image data)
+        lut.SetRange(value_range[0], value_range[1])  # This defines the grayscale range explicitly
+
+        # Create the scalar bar (colorbar)
+        scalar_bar = vtk.vtkScalarBarActor()
+        scalar_bar.SetLookupTable(lut)  # Attach the grayscale LUT
+        scalar_bar.SetLabelFormat("%.0f")  # Integer labels (0, 1, 2, ... 255)
+        scalar_bar.SetPosition(0.8, 0.1)  # Position of the colorbar
+        scalar_bar.SetHeight(0.5)  # Adjust height (increase size)
+        scalar_bar.SetWidth(0.1)   # Adjust width (increase size)
+
+        # Add the scalar bar to the scene
+        scene.add(scalar_bar)
+    # Add tractography
+    if tractography is not None:
+        streamlines = nib.streamlines.load(tractography).streamlines
+        stream_actor = actor.line(streamlines, colors=(1, 0, 0))
+        scene.add(stream_actor)
+
+
+    
+
+
+
+
     # Set up camera
     scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=camera_up)
 
@@ -107,3 +160,7 @@ def plot_nifti(
 
     if interactive:
         window.show(scene, size=size, reset_camera=True)
+
+
+
+
