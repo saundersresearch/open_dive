@@ -43,11 +43,6 @@ def main():
         help="Interpolation method to use (nearest or linear). Default is 'nearest'.",
     )
     parser.add_argument(
-        "--not_radiological",
-        action="store_true",
-        help="Do not plot in radiological view (i.e., subject right is on image right)",
-    )
-    parser.add_argument(
         "--scalar_colorbar",
         action="store_true",
         help="Whether to show a colorbar, by default True",
@@ -69,7 +64,6 @@ def main():
         orientation=args.orientation,
         size=args.size,
         volume_idx=args.volume_idx,
-        radiological=not args.not_radiological,
         save_path=args.save_path,
         interactive=args.interactive,
         value_range=args.value_range,

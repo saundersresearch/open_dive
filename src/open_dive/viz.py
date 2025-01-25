@@ -13,7 +13,6 @@ def plot_nifti(
     orientation="axial",
     size=(600, 400),
     value_range=None,
-    radiological=True,
     save_path=None,
     interactive=True,
     scalar_colorbar=True,
@@ -33,8 +32,6 @@ def plot_nifti(
         Can be "axial", "sagittal" or "coronal", by default "axial"
     size : tuple, optional
         Size of window, by default (600,400)
-    radiological : bool, optional
-        Whether to plot in radiological view (subject right is on image left), by default True
     save_path : str or Path, optional
         Optional path to save to, by default None
     interactive : bool, optional
@@ -76,10 +73,6 @@ def plot_nifti(
         value_range = [np.min(data), np.max(data)]
     else:
         value_range = [value_range[0], value_range[1]]
-
-
-    if radiological and orientation == "axial":
-        data = np.flip(data, axis=0)
 
     # Set up slicer and window
     slice_actor = slicer(data, affine=affine, value_range=value_range, **kwargs)
