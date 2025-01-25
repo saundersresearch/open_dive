@@ -4,12 +4,14 @@ from dipy.viz import window, actor
 from fury.actor import slicer
 from fury.colormap import colormap_lookup_table
 import vtk
+import pdb 
 
 def plot_nifti(
     nifti_path,
     data_slice="m",
     orientation="axial",
     size=(600, 400),
+    value_range=None,
     radiological=True,
     save_path=None,
     interactive=True,
@@ -47,6 +49,13 @@ def plot_nifti(
     # Get the data and affine
     data = nifti.get_fdata()
     affine = nifti.affine
+
+    # value range
+    if value_range is None:
+        value_range = [np.min(data), np.max(data)]
+    else:
+        value_range = [value_range[0], value_range[1]]
+
 
     if radiological and orientation == "axial":
         data = np.flip(data, axis=0)
@@ -89,11 +98,15 @@ def plot_nifti(
         lut = vtk.vtkLookupTable()
         lut.SetNumberOfTableValues(256)  # Full grayscale (256 levels)
         lut.Build()  # Initialize the LUT
+        
+        
         for i in range(256):
             lut.SetTableValue(i, i / 255.0, i / 255.0, i / 255.0, 1)  # Grayscale colors
-
+        '''
+        We can further optimize this later to support orther colormaps; this just supports grayscale right now.
+        '''
         # Set the full grayscale range (e.g., 0 to 255 for typical image data)
-        lut.SetRange(0, 255)  # This defines the grayscale range explicitly
+        lut.SetRange(value_range[0], value_range[1])  # This defines the grayscale range explicitly
 
         # Apply the lookup table to the slice actor
         slice_actor.GetProperty().SetLookupTable(lut)
