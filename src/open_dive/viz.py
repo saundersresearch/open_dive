@@ -6,6 +6,7 @@ from fury.colormap import colormap_lookup_table
 import vtk
 import pdb 
 
+
 def plot_nifti(
     nifti_path,
     data_slice="m",
@@ -16,6 +17,8 @@ def plot_nifti(
     save_path=None,
     interactive=True,
     scalar_colorbar=True,
+    tractography=None,
+    tractography_colormap=None,
     **kwargs,
 ):
     """Create a 2D rendering of a NIFTI slice.
@@ -122,8 +125,18 @@ def plot_nifti(
 
         # Add the scalar bar to the scene
         scene.add(scalar_bar)
+    # Add tractography
+    if tractography is not None:
+        streamlines = nib.streamlines.load(tractography).streamlines
+        stream_actor = actor.line(streamlines, colors=(1, 0, 0))
+        scene.add(stream_actor)
 
-        
+
+    
+
+
+
+
     # Set up camera
     scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=camera_up)
 
