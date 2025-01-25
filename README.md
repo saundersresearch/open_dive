@@ -21,6 +21,15 @@ TBD
 
 For details on contributing, please see [CONTRIBUTING.md](CONTRIBUTING.md)
 
+## Contributors
+- @saundersresearch
+- @ElyssaMcMaster
+- @neurolabusc
+- @johaankjis
+- @orekiwlg
+- @mukhsadr
+- @Beeper-Weepers
+
 ## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
