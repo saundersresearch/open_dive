@@ -28,6 +28,7 @@ For details on contributing, please see [CONTRIBUTING.md](CONTRIBUTING.md)
 - @johaankjis
 - @orekiwlg
 - @mukhsadr
+- @Beeper-Weepers
 
 ## License
 
