@@ -42,6 +42,11 @@ def main():
         action="store_true",
         help="Do not plot in radiological view (i.e., subject right is on image right)",
     )
+    parser.add_argument(
+        "--scalar_colorbar",
+        action="store_true",
+        help="Whether to show a colorbar, by default True",
+    )
 
     args = parser.parse_args()
 
@@ -56,4 +61,6 @@ def main():
         interactive=args.interactive,
         value_range=args.value_range,
         interpolation=args.interpolation,
+        scalar_colorbar=args.scalar_colorbar,
     )
+
