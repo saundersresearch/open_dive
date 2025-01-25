@@ -53,11 +53,7 @@ def main():
         type=Path,
         help="Optional tractogram to plot with slices",
     )
-    parser.add_argument(
-        "--tractography_colormap",
-        default="jet",
-        help="Colormap for streamlines",
-    )
+
 
     args = parser.parse_args()
 
@@ -74,6 +70,6 @@ def main():
         interpolation=args.interpolation,
         scalar_colorbar=args.scalar_colorbar,
         tractography=args.tractography,
-        tractography_colormap=args.tractography_colormap,
+
     )
 

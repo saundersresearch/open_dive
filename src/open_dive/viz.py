@@ -18,7 +18,7 @@ def plot_nifti(
     interactive=True,
     scalar_colorbar=True,
     tractography=None,
-    tractography_colormap=None,
+
     **kwargs,
 ):
     """Create a 2D rendering of a NIFTI slice.
