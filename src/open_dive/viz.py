@@ -64,7 +64,7 @@ def plot_nifti(
         data = np.flip(data, axis=0)
 
     # Set up slicer and window
-    slice_actor = slicer(data, affine=affine, **kwargs)
+    slice_actor = slicer(data, affine=affine, value_range=value_range, **kwargs)
     scene = window.Scene()
     scene.add(slice_actor)
 
@@ -110,10 +110,6 @@ def plot_nifti(
         '''
         # Set the full grayscale range (e.g., 0 to 255 for typical image data)
         lut.SetRange(value_range[0], value_range[1])  # This defines the grayscale range explicitly
-
-        # Apply the lookup table to the slice actor
-        slice_actor.GetProperty().SetLookupTable(lut)
-        slice_actor.GetProperty().SetUseLookupTableScalarRange(True)  # Ensure LUT scalar range is used
 
         # Create the scalar bar (colorbar)
         scalar_bar = vtk.vtkScalarBarActor()
