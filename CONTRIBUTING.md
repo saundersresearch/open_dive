@@ -117,6 +117,7 @@ conda activate open-dive
 pip install -e </path/to/open_dive>
 ```
 
+### Congrats!! If you've made it this far, you're ready to start hacking! Head to Issue #1 to get started!
 
 ## Coding guidelines
 We ask that all code is well-commented. Please add `numpydoc`-style docstrings to document your functions and classes. For example, if you create code to add two numbers:
