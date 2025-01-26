@@ -54,12 +54,22 @@ def main():
         nargs="+",  # Accept one or more arguments
         help="Optional tractogram(s) to plot with slices. Can provide multiple files.",
     )
-    # parser.add_argument(
-    #     "--tractography_values",
-    #     type=float,
-    #     nargs="+",
-    #     help="Values to use for coloring each tractogram (must match number of tractography files)",
-    # )
+    parser.add_argument(
+        "--tractography_values",
+        type=float,
+        nargs="+",
+        help="Values to use for coloring each tractogram (must match number of tractography files)",
+    )
+    parser.add_argument(
+        "--tractography_cmap",
+        help="Matplotlib colormap to use for tractography. Default is plasma if tractograph_values is provided, otherwise Set1.",
+    )
+    parser.add_argument(
+        "--tractography_cmap_range",
+        type=float,
+        nargs=2,
+        help="Optional range to use for the colormap. Default is 0 to 1.",
+    )
 
 
     args = parser.parse_args()
@@ -77,5 +87,8 @@ def main():
         interpolation=args.interpolation,
         scalar_colorbar=args.scalar_colorbar,
         tractography=args.tractography,
+        tractography_values=args.tractography_values,
+        tractography_cmap=args.tractography_cmap,
+        tractography_cmap_range=args.tractography_cmap_range,
     )
 

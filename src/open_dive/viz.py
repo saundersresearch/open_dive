@@ -6,7 +6,7 @@ from fury.colormap import colormap_lookup_table
 import vtk
 import pdb 
 from pathlib import Path
-
+import matplotlib.pyplot as plt 
 
 def plot_nifti(
     nifti_path,
@@ -18,6 +18,9 @@ def plot_nifti(
     interactive=True,
     scalar_colorbar=True,
     tractography=None,
+    tractography_values=None,
+    tractography_cmap=None,
+    tractography_cmap_range=None,
     volume_idx=None,
     **kwargs,
 ):
@@ -37,8 +40,16 @@ def plot_nifti(
         Optional path to save to, by default None
     interactive : bool, optional
         Whether to interactively show the scene, by default True
-    colorbar : bool, optional
+    scalar_colorbar : bool, optional
         Whether to show a scalar colorbar (for FA, T1, etc.), by default True
+    tractography : list of str or Path, optional
+        Optional tractogram(s) to plot with slices. Can provide multiple files, by default None
+    tractography_values : list of float, optional
+        Optional values to color the tractography with, by default None
+    tractography_cmap : str, optional
+        Optional colormap to use for the tractography, by default None
+    tractography_cmap_range : list of float, optional
+        Optional range to use for the colormap, by default None for 0 to 1
     volume_idx : int, optional
         Index of the volume to display if the image is 4D, by default None
     **kwargs
@@ -135,20 +146,25 @@ def plot_nifti(
         scene.add(scalar_bar)
     # Add tractography
     if tractography is not None:
-        # Convert to list if single tractography file
-            colors = [(1, 0, 0)] * len(tractography)  # All red
+        if tractography_cmap is None:
+            tractography_cmap = "Set1" if tractography_values is None else "plasma"
+        cmap = plt.get_cmap(tractography_cmap)
+
+        # Set to range
+        if tractography_values is not None:
+            if tractography_cmap_range is not None:
+                norm = plt.Normalize(vmin=tractography_cmap_range[0], vmax=tractography_cmap_range[1])
+            else:
+                norm = plt.Normalize(vmin=0, vmax=1)
+            colors = [cmap(norm(val)) for val in tractography_values]
+        else:
+            colors = [cmap(norm(i)) for i in range(len(tractography))]
             
         # Add each tractography with its corresponding color
     for tract_file, color in zip(tractography, colors):
         streamlines = nib.streamlines.load(tract_file).streamlines
-        stream_actor = actor.line(streamlines, colors=color)
+        stream_actor = actor.line(streamlines, colors=color, fake_tube=True, linewidth=0.2)
         scene.add(stream_actor)
-
-
-    
-
-
-
 
     # Set up camera
     scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=camera_up)
