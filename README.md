@@ -32,7 +32,7 @@ We welcome issues and pull requests! For details on contributing, please see [CO
 - [Johaan Kathilankal Jis](https://github.com/johaankjis)
 - [Minyi Sun](https://github.com/Orekiwlg)
 - [Adam Sadriddinov](https://github.com/mukhsadr)
-- [Lukas](https://github.com/beeper-weepers)
+- [Lukas VanTilburg](https://github.com/beeper-weepers)
 - [Kurt Schilling](https://github.com/schillkg)
 
 ## License
