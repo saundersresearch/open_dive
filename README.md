@@ -22,13 +22,13 @@ TBD
 For details on contributing, please see [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Contributors
-- [@saundersresearch](https://github.com/saundersresearch)
-- [@ElyssaMcMaster](https://github.com/ElyssaMcMaster)
-- [@neurolabusc](https://github.com/neurolabusc/neurolabusc)
-- [@johaankjis](https://github.com/johaankjis)
-- [@orekiwlg](https://github.com/Orekiwlg)
-- [@mukhsadr](https://github.com/mukhsadr)
-- @Beeper-Weepers
+- [Adam Saunders](https://github.com/saundersresearch)
+- [Elyssa McMaster](https://github.com/ElyssaMcMaster)
+- [Chris Rorden](https://github.com/neurolabusc/neurolabusc)
+- [Johaan Kathilankal Jis](https://github.com/johaankjis)
+- [Minyi Sun](https://github.com/Orekiwlg)
+- [Adam Sadriddinov](https://github.com/mukhsadr)
+- [Lukas](https://github.com/beeper-weepers)
 
 ## License
 
