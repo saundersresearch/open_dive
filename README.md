@@ -22,12 +22,12 @@ TBD
 For details on contributing, please see [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Contributors
-- @saundersresearch
-- @ElyssaMcMaster
-- @neurolabusc
-- @johaankjis
-- @orekiwlg
-- @mukhsadr
+- [@saundersresearch](https://github.com/saundersresearch)
+- [@ElyssaMcMaster](https://github.com/ElyssaMcMaster)
+- [@neurolabusc](https://github.com/neurolabusc/neurolabusc)
+- [@johaankjis](https://github.com/johaankjis)
+- [@orekiwlg](https://github.com/Orekiwlg)
+- [@mukhsadr](https://github.com/mukhsadr)
 - @Beeper-Weepers
 
 ## License
