@@ -1,6 +1,6 @@
 import nibabel as nib
 import numpy as np
-from dipy.viz import window, actor
+from dipy.viz import window, actor, ui
 from fury.actor import slicer
 from fury.colormap import colormap_lookup_table
 import vtk
@@ -18,6 +18,7 @@ def plot_nifti(
     interactive=True,
     scalar_colorbar=True,
     tractography=None,
+    tractography_opacity = 0.6,
     tractography_values=None,
     tractography_cmap=None,
     tractography_cmap_range=None,
@@ -44,6 +45,8 @@ def plot_nifti(
         Whether to show a scalar colorbar (for FA, T1, etc.), by default True
     tractography : list of str or Path, optional
         Optional tractogram(s) to plot with slices. Can provide multiple files, by default None
+    tractography_opacity : float, optional
+        Optional opacity value for tractograms between (0, 1), by default 0.6
     tractography_values : list of float, optional
         Optional values to color the tractography with, by default None
     tractography_cmap : str, optional
@@ -150,6 +153,11 @@ def plot_nifti(
             tractography_cmap = "Set1" if tractography_values is None else "plasma"
         cmap = plt.get_cmap(tractography_cmap)
 
+        try:
+            tractography_opacity = float(tractography_opacity)
+        except:
+            print("[ERROR] invalid opacity value (0,1). ")
+
         # Set to range
         if tractography_values is not None:
             if tractography_cmap_range is not None:
@@ -158,12 +166,13 @@ def plot_nifti(
                 norm = plt.Normalize(vmin=0, vmax=1)
             colors = [cmap(norm(val)) for val in tractography_values]
         else:
-            colors = [cmap(norm(i)) for i in range(len(tractography))]
+            colors = [cmap(i) for i in range(len(tractography))]
             
         # Add each tractography with its corresponding color
     for tract_file, color in zip(tractography, colors):
         streamlines = nib.streamlines.load(tract_file).streamlines
-        stream_actor = actor.line(streamlines, colors=color, fake_tube=True, linewidth=0.2)
+        print("---------opacity ", tractography_opacity)
+        stream_actor = actor.line(streamlines, colors=color, fake_tube=True, linewidth=0.2, opacity=tractography_opacity)
         scene.add(stream_actor)
 
     # Set up camera
