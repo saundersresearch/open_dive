@@ -21,6 +21,7 @@ def plot_nifti(
     tractography_values=None,
     tractography_cmap=None,
     tractography_cmap_range=None,
+    tractography_colorbar=False,
     volume_idx=None,
     **kwargs,
 ):
@@ -50,6 +51,8 @@ def plot_nifti(
         Optional colormap to use for the tractography, by default None
     tractography_cmap_range : list of float, optional
         Optional range to use for the colormap, by default None for 0 to 1
+    tractography_colorbar : bool, optional
+        Whether to show a colorbar for the tractography, by default False
     volume_idx : int, optional
         Index of the volume to display if the image is 4D, by default None
     **kwargs
@@ -150,20 +153,49 @@ def plot_nifti(
             tractography_cmap = "Set1" if tractography_values is None else "plasma"
         cmap = plt.get_cmap(tractography_cmap)
 
+        if tractography_cmap_range is None:
+            tractography_cmap_range = [0, 1]
+
         # Set to range
         if tractography_values is not None:
-            if tractography_cmap_range is not None:
-                norm = plt.Normalize(vmin=tractography_cmap_range[0], vmax=tractography_cmap_range[1])
-            else:
-                norm = plt.Normalize(vmin=0, vmax=1)
+            norm = plt.Normalize(vmin=tractography_cmap_range[0], vmax=tractography_cmap_range[1])
             colors = [cmap(norm(val)) for val in tractography_values]
         else:
-            colors = [cmap(norm(i)) for i in range(len(tractography))]
+            colors = [cmap(i) for i in range(len(tractography))]
+
+        # Apply colorbar
+        if tractography_colorbar:
+            # Create a grayscale colormap (from black to white)
+            lut = vtk.vtkLookupTable()
+            lut.SetNumberOfTableValues(256)  # Full grayscale (256 levels)
+            lut.Build()  # Initialize the LUT
             
-        # Add each tractography with its corresponding color
+            cmap_range = np.linspace(tractography_cmap_range[0], tractography_cmap_range[1], 256)
+            for i in range(256):
+                # Sample the colormap
+                color = cmap(norm(cmap_range[i]))
+                lut.SetTableValue(i, color[0], color[1], color[2], 1)  # Grayscale colors
+
+            if tractography_cmap_range is not None:
+                lut.SetRange(tractography_cmap_range[0], tractography_cmap_range[1])
+            else:
+                lut.SetRange(0, 1)
+
+            # Create the scalar bar (colorbar)
+            tract_bar = vtk.vtkScalarBarActor()
+            tract_bar.SetLookupTable(lut)  # Attach the grayscale LUT
+            tract_bar.SetLabelFormat("%.2f")  # Labels
+            tract_bar.SetPosition(0.1, 0.1)  # Position of the colorbar
+            tract_bar.SetHeight(0.5)  # Adjust height (increase size)
+            tract_bar.SetWidth(0.1)   # Adjust width (increase size)
+
+            # Add the scalar bar to the scene
+            scene.add(tract_bar)
+            
+    # Add each tractography with its corresponding color
     for tract_file, color in zip(tractography, colors):
         streamlines = nib.streamlines.load(tract_file).streamlines
-        stream_actor = actor.line(streamlines, colors=color, fake_tube=True, linewidth=0.2)
+        stream_actor = actor.line(streamlines, colors=color, linewidth=0.2)
         scene.add(stream_actor)
 
     # Set up camera

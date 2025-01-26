@@ -70,6 +70,11 @@ def main():
         nargs=2,
         help="Optional range to use for the colormap. Default is 0 to 1.",
     )
+    parser.add_argument(
+        "--tractography_colorbar",
+        action="store_true",
+        help="Whether to show a tractography values colorbar, by default False",
+    )
 
 
 
@@ -98,7 +103,6 @@ def main():
         tractography_values=args.tractography_values,
         tractography_cmap=args.tractography_cmap,
         tractography_cmap_range=args.tractography_cmap_range,
-
-
+        tractography_colorbar=args.tractography_colorbar,
     )
 
