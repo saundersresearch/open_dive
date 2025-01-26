@@ -11,15 +11,19 @@ For FAQs related to diffusion MRI, see our diffusion FAQ issue (#4).
 
 ## Installation
 
-TBD
+You can install the package using Python:
+
+```bash
+pip install git+https://github.com/MASILab/open_dive
+```
 
 ## Usage
 
-TBD
+After installing the package, you should be able to use the `nifti2png` command to produce images. To view your visualizations, use the `--interactive` flag. Please see the [wiki](https://github.com/MASILab/open_dive/wiki) for documentation on using the command.
 
 ## Contributing
 
-For details on contributing, please see [CONTRIBUTING.md](CONTRIBUTING.md)
+We welcome issues and pull requests! For details on contributing, please see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Contributors
 - [Adam Saunders](https://github.com/saundersresearch)
