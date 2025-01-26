@@ -51,7 +51,14 @@ def main():
         ## plot tractogram with slices
         "--tractography",
         type=Path,
-        help="Optional tractogram to plot with slices",
+        nargs="+",  # Accept one or more arguments
+        help="Optional tractogram(s) to plot with slices. Can provide multiple files.",
+    )
+    parser.add_argument(
+        "--tractography_values",
+        type=float,
+        nargs="+",
+        help="Values to use for coloring each tractogram (must match number of tractography files)",
     )
 
 
@@ -70,6 +77,6 @@ def main():
         interpolation=args.interpolation,
         scalar_colorbar=args.scalar_colorbar,
         tractography=args.tractography,
-
+        tractography_values=args.tractography_values,
     )
 

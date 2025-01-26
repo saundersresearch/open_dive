@@ -135,13 +135,14 @@ def plot_nifti(
         scene.add(scalar_bar)
     # Add tractography
     if tractography is not None:
-        colors = [(1,0,0)] * len(tractography)
         # Convert to list if single tractography file
+            colors = [(1, 0, 0)] * len(tractography)  # All red
+            
         # Add each tractography with its corresponding color
-        for tract_file, color in zip(tractography, colors):
-            streamlines = nib.streamlines.load(tract_file).streamlines
-            stream_actor = actor.line(streamlines, colors=color)
-            scene.add(stream_actor)
+    for tract_file, color in zip(tractography, colors):
+        streamlines = nib.streamlines.load(tract_file).streamlines
+        stream_actor = actor.line(streamlines, colors=color)
+        scene.add(stream_actor)
 
 
     
