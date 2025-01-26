@@ -9,7 +9,7 @@ def main():
     parser = argparse.ArgumentParser(description="Plot a slice of a NIFTI file")
     parser.add_argument("nifti_path", type=Path, help="Path to NIFTI to plot")
     parser.add_argument(
-        "-s", "--slice", default="m", help='Slice to plot or "m" for middle slice'
+        "-s", "--slice", default="m", help='Slice index (integer) or "m" for middle slice'
     )
     parser.add_argument(
         "-o",
@@ -54,15 +54,22 @@ def main():
         nargs="+",  # Accept one or more arguments
         help="Optional tractogram(s) to plot with slices. Can provide multiple files.",
     )
-    # parser.add_argument(
-    #     "--tractography_values",
-    #     type=float,
-    #     nargs="+",
-    #     help="Values to use for coloring each tractogram (must match number of tractography files)",
-    # )
+    parser.add_argument(
+        "--tractography_values",
+        type=float,
+        nargs="+",
+        help="Values to use for coloring each tractogram (must match number of tractography files)",
+    )
 
 
     args = parser.parse_args()
+
+    # Convert slice argument to int if it's not 'm'
+    if args.slice != "m":
+        try:
+            args.slice = int(args.slice)
+        except ValueError:
+            raise ValueError("Slice argument must be either 'm' or an integer")
 
     # Plot the NIFTI
     plot_nifti(
@@ -77,5 +84,6 @@ def main():
         interpolation=args.interpolation,
         scalar_colorbar=args.scalar_colorbar,
         tractography=args.tractography,
+        tractography_values=args.tractography_values,
     )
 
