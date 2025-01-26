@@ -1,7 +1,13 @@
 # OpenDIVE - BrainHack Vandy 2025
 OpenDIVE (Open Diffusion Imaging Visualization for Everyone) is a command line interface tool for generating accessible, interpretable visualizations from diffusion MRI.
 
-Despite the prolific availability of software tools to visualize diffusion MRI data, there is no standardized visualization to summarize longitudinal changes. Similarly, the current standard of visualizations are not accessible to people with common forms of colorblindness. We propose a software package to both standardize and improve accessibility to representations of diffusion data. Aim 1: We will generate a standardized display for anatomical images to overlay the diffusion models based on user input. Aim 2: We compute bundle volume percent change over time, and given a specified color map, we display the tracks with the relevant color bar to summarize change over time. We can optimize this color map to be accessible for color-blind populations. 
+Despite the prolific availability of software tools to visualize diffusion MRI data, there is no standardized visualization to summarize longitudinal changes. Similarly, the current standard of visualizations are not accessible to people with common forms of colorblindness. We propose a software package to both standardize and improve accessibility to representations of diffusion data. 
+
+
+Aim 1: [We propose a colorblind-friendly colormap for diffusion MRI images.](https://neurolabusc.github.io/OpenDIVE/)
+
+Aim 2: We generate a standardized display for anatomical images to overlay the diffusion models based on user input, including support for multiple track files, color maps, and illustration of bundle summary metrics (p-value, volume, effect size, etc.) per bundle.
+
 
 The team will write documentation at the event. Installation and usage details will be available after 1/26/2025.
 
