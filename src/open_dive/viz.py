@@ -195,7 +195,7 @@ def plot_nifti(
     # Add each tractography with its corresponding color
     for tract_file, color in zip(tractography, colors):
         streamlines = nib.streamlines.load(tract_file).streamlines
-        stream_actor = actor.line(streamlines, colors=color, linewidth=0.2)
+        stream_actor = actor.line(streamlines, colors=color, linewidth=0.005)
         scene.add(stream_actor)
 
     # Set up camera
