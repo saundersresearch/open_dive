@@ -7,6 +7,11 @@ import vtk
 import pdb 
 from pathlib import Path
 import matplotlib.pyplot as plt 
+from fury.actor import tensor_slicer, odf_slicer
+from dipy.io.image import load_nifti
+from dipy.reconst.shm import CsaOdfModel
+import dipy.data as dp
+from dipy.reconst.dti import from_lower_triangular, decompose_tensor
 
 def plot_nifti(
     nifti_path,
@@ -23,6 +28,10 @@ def plot_nifti(
     tractography_cmap_range=None,
     tractography_colorbar=False,
     volume_idx=None,
+    tensor_image=None,
+    odf_image=None,
+    sh_order_max=8,
+    sh_basis="descoteaux07",
     **kwargs,
 ):
     """Create a 2D rendering of a NIFTI slice.
@@ -197,7 +206,22 @@ def plot_nifti(
         streamlines = nib.streamlines.load(tract_file).streamlines
         stream_actor = actor.line(streamlines, colors=color, linewidth=0.2)
         scene.add(stream_actor)
+    
+    # ✅ **Add Diffusion Tensor Visualization (DTI)**
+    if tensor_image is not None:
+        print("tensor")
+        tensor_data, tensor_affine = load_nifti(tensor_image)
+        tensor_matrix = from_lower_triangular(tensor_data)
+        eigvals, eigvecs = decompose_tensor(tensor_matrix)
+        tensor_actor = tensor_slicer(eigvals, eigvecs, affine=tensor_affine)
+        scene.add(tensor_actor)
 
+    # ✅ **Add Orientation Distribution Function (ODF) Visualization**
+    if odf_image:
+        odf_data, odf_affine = load_nifti(odf_image)
+        sphere = dp.get_sphere("repulsion724")  # Use a precomputed sphere
+        odf_actor = odf_slicer(odf_data, sphere=sphere, scale=0.5, norm=False)
+        scene.add(odf_actor)
     # Set up camera
     scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=camera_up)
 

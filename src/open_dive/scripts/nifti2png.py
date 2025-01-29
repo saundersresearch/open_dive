@@ -76,6 +76,10 @@ def main():
         help="Whether to show a tractography values colorbar, by default False",
     )
 
+    parser.add_argument("--tensor_image", type=Path, help="Path to Diffusion Tensor image (DTI)")
+    parser.add_argument("--odf_image", type=Path, help="Path to ODF image")
+    parser.add_argument("--sh_order_max", type=int, default=8, help="SH order for ODF rendering (default: 8)")
+    parser.add_argument("--sh_basis", default="descoteaux07", help="SH basis (default: descoteaux07)")
 
 
     args = parser.parse_args()
@@ -104,5 +108,9 @@ def main():
         tractography_cmap=args.tractography_cmap,
         tractography_cmap_range=args.tractography_cmap_range,
         tractography_colorbar=args.tractography_colorbar,
+        tensor_image=args.tensor_image,
+        odf_image=args.odf_image,
+        sh_order_max=args.sh_order_max,
+        sh_basis=args.sh_basis
     )
 
