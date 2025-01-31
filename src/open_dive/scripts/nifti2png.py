@@ -71,21 +71,23 @@ def main():
         help="Optional range to use for the colormap. Default is 0 to 1.",
     )
     parser.add_argument(
+        "--tractography_opacity",
+        type=float,
+        default=0.6,
+        help="Optional value to use for the tractogram opacity in range (0, 1). Default is 0.6.",
+    )
+    parser.add_argument(
         "--tractography_colorbar",
         action="store_true",
         help="Whether to show a tractography values colorbar, by default False",
     )
 
-
+    parser.add_argument("--tensor_image", type=Path, help="Path to tensor image, format is Dxx, Dxy, Dyy, Dxz, Dyz, Dzz")
+    parser.add_argument("--odf_image", type=Path, help="Path to orientation distribution function image represented as spherical harmonicss")
+    parser.add_argument("--sh_basis", default="descoteaux07", help="Spherical harmonic basis, either 'descoteaux07' (default) or 'tournier07'")
+    parser.add_argument("--scale", type=float, default=1, help="Scale of the tensor glyphs or ODF glyphs (default: 1)")
 
     args = parser.parse_args()
-
-    # Convert slice argument to int if it's not 'm'
-    if args.slice != "m":
-        try:
-            args.slice = int(args.slice)
-        except ValueError:
-            raise ValueError("Slice argument must be either 'm' or an integer")
 
     # Plot the NIFTI
     plot_nifti(
@@ -100,9 +102,14 @@ def main():
         interpolation=args.interpolation,
         scalar_colorbar=args.scalar_colorbar,
         tractography=args.tractography,
+        tractography_opacity=args.tractography_opacity,
         tractography_values=args.tractography_values,
         tractography_cmap=args.tractography_cmap,
         tractography_cmap_range=args.tractography_cmap_range,
         tractography_colorbar=args.tractography_colorbar,
+        tensor_image=args.tensor_image,
+        odf_image=args.odf_image,
+        sh_basis=args.sh_basis,
+        scale=args.scale,
     )
 
