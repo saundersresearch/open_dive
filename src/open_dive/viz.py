@@ -1,12 +1,14 @@
 import nibabel as nib
 import numpy as np
-from dipy.viz import window, actor, ui
+from dipy.viz import window, actor
 from fury.actor import slicer
-from fury.colormap import colormap_lookup_table
 import vtk
-import pdb 
-from pathlib import Path
 import matplotlib.pyplot as plt 
+from fury.actor import tensor_slicer, odf_slicer
+from dipy.io.image import load_nifti
+from dipy.data import get_sphere
+from dipy.reconst.dti import from_lower_triangular, decompose_tensor
+from dipy.reconst.shm import calculate_max_order, sh_to_sf_matrix
 
 def plot_nifti(
     nifti_path,
@@ -24,6 +26,10 @@ def plot_nifti(
     tractography_cmap_range=None,
     tractography_colorbar=False,
     volume_idx=None,
+    tensor_image=None,
+    odf_image=None,
+    sh_basis="descoteaux07",
+    scale=1,
     **kwargs,
 ):
     """Create a 2D rendering of a NIFTI slice.
@@ -58,6 +64,14 @@ def plot_nifti(
         Whether to show a colorbar for the tractography, by default False
     volume_idx : int, optional
         Index of the volume to display if the image is 4D, by default None
+    tensor_image : str or Path, optional
+        Path to a tensor image to visualize (format is Dxx, Dxy, Dyy, Dxz, Dyz, Dzz), by default None
+    odf_image : str or Path, optional
+        Path to an ODF image to visualize, by default None
+    sh_basis : str, optional
+        Basis type for the spherical harmonics, either "descoteaux07" or "tournier07", by default "descoteaux07"
+    scale : float, optional
+        Scale of the tensor glyphs or ODF glyphs, by default 1
     **kwargs
         Additional keyword arguments to pass to fury.actor.slicer
     """
@@ -94,7 +108,7 @@ def plot_nifti(
         value_range = [np.min(data), np.max(data)]
 
     # Set up slicer and window
-    slice_actor = slicer(data, affine=affine, value_range=value_range, **kwargs)
+    slice_actor = slicer(data, value_range=value_range, **kwargs)
     scene = window.Scene()
     scene.add(slice_actor)
 
@@ -132,7 +146,6 @@ def plot_nifti(
         lut.SetNumberOfTableValues(256)  # Full grayscale (256 levels)
         lut.Build()  # Initialize the LUT
         
-        
         for i in range(256):
             lut.SetTableValue(i, i / 255.0, i / 255.0, i / 255.0, 1)  # Grayscale colors
 
@@ -165,7 +178,7 @@ def plot_nifti(
             colors = [cmap(norm(val)) for val in tractography_values]
         else:
             colors = [cmap(i) for i in range(len(tractography))]
-           
+
         # Apply colorbar
         if tractography_colorbar:
             # Create a grayscale colormap (from black to white)
@@ -194,12 +207,30 @@ def plot_nifti(
 
             # Add the scalar bar to the scene
             scene.add(tract_bar)
-            
-            # Add each tractography with its corresponding color
-            for tract_file, color in zip(tractography, colors):
-                streamlines = nib.streamlines.load(tract_file).streamlines
-                stream_actor = actor.line(streamlines, colors=color, fake_tube=True, linewidth=0.2, opacity=tractography_opacity)
-                scene.add(stream_actor)
+                
+        # Add each tractography with its corresponding color
+        for tract_file, color in zip(tractography, colors):
+            streamlines = nib.streamlines.load(tract_file).streamlines
+            stream_actor = actor.line(streamlines, colors=color, linewidth=0.2, opacity=tractography_opacity)
+            scene.add(stream_actor)
+    
+    # Add diffusion tensor visualization
+    if tensor_image is not None:
+        tensor_data, tensor_affine = load_nifti(tensor_image)
+        sphere = get_sphere(name="repulsion724")  # Use a precomputed sphere
+        tensor_matrix = from_lower_triangular(tensor_data)
+        eigvals, eigvecs = decompose_tensor(tensor_matrix)
+        tensor_actor = tensor_slicer(evals=eigvals, evecs=eigvecs, sphere=sphere, scale=scale, norm=False)
+        scene.add(tensor_actor)
+
+    # Add orientation distribution function visualization
+    if odf_image:
+        odf_data, odf_affine = load_nifti(odf_image)
+        sphere = get_sphere(name="repulsion724")  # Use a precomputed sphere
+        sh_order_max = calculate_max_order(odf_data.shape[-1])
+        B, _ = sh_to_sf_matrix(sphere=sphere, sh_order_max=sh_order_max, basis_type=sh_basis)
+        odf_actor = odf_slicer(odf_data, sphere=sphere, B_matrix=B, scale=scale, norm=False)
+        scene.add(odf_actor)
 
     # Set up camera
     scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=camera_up)

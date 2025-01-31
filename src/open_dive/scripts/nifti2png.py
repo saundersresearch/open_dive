@@ -82,6 +82,11 @@ def main():
         help="Whether to show a tractography values colorbar, by default False",
     )
 
+    parser.add_argument("--tensor_image", type=Path, help="Path to tensor image, format is Dxx, Dxy, Dyy, Dxz, Dyz, Dzz")
+    parser.add_argument("--odf_image", type=Path, help="Path to orientation distribution function image represented as spherical harmonicss")
+    parser.add_argument("--sh_basis", default="descoteaux07", help="Spherical harmonic basis, either 'descoteaux07' (default) or 'tournier07'")
+    parser.add_argument("--scale", type=float, default=1, help="Scale of the tensor glyphs or ODF glyphs (default: 1)")
+
     args = parser.parse_args()
 
     # Plot the NIFTI
@@ -102,5 +107,9 @@ def main():
         tractography_cmap=args.tractography_cmap,
         tractography_cmap_range=args.tractography_cmap_range,
         tractography_colorbar=args.tractography_colorbar,
+        tensor_image=args.tensor_image,
+        odf_image=args.odf_image,
+        sh_basis=args.sh_basis,
+        scale=args.scale,
     )
 
