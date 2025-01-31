@@ -4,7 +4,8 @@ from dipy.viz import window, actor
 from fury.actor import slicer
 import vtk
 import matplotlib.pyplot as plt 
-from fury.actor import tensor_slicer, odf_slicer
+from fury.actor import tensor_slicer, odf_slicer, ellipsoid, _color_fa, _fa
+from fury.utils import apply_affine
 from dipy.io.image import load_nifti
 from dipy.data import get_sphere
 from dipy.reconst.dti import from_lower_triangular, decompose_tensor
@@ -108,36 +109,31 @@ def plot_nifti(
         value_range = [np.min(data), np.max(data)]
 
     # Set up slicer and window
-    slice_actor = slicer(data, value_range=value_range, **kwargs)
+    slice_actor = slicer(data, value_range=value_range, affine=affine, **kwargs)
     scene = window.Scene()
     scene.add(slice_actor)
 
     # Get slice if not defined
     if orientation == "axial":
         data_slice = data.shape[2] // 2 if data_slice == "m" else data_slice
-        slice_actor.display_extent(
-            0, data.shape[0], 0, data.shape[1], data_slice, data_slice
-        )
+        extent = (0, data.shape[0], 0, data.shape[1], data_slice, data_slice)
 
         camera_pos = (0, 0, 1)
         camera_up = (0, 1, 0)
     elif orientation == "coronal":
         data_slice = data.shape[1] // 2 if data_slice == "m" else data_slice
-        slice_actor.display_extent(
-            0, data.shape[0], data_slice, data_slice, 0, data.shape[2]
-        )
+        extent = (0, data.shape[0], data_slice, data_slice, 0, data.shape[2])
 
         camera_pos = (0, 1, 0)
         camera_up = (0, 0, 1)
     elif orientation == "sagittal":
         data_slice = data.shape[0] // 2 if data_slice == "m" else data_slice
-        slice_actor.display_extent(
-            data_slice, data_slice, 0, data.shape[1], 0, data.shape[2]
-        )
+        extent = (data_slice, data_slice, 0, data.shape[1], 0, data.shape[2])
 
         camera_pos = (1, 0, 0)
         camera_up = (0, 0, 1)
     camera_focal = (0, 0, 0)
+    slice_actor.display_extent(*extent)
 
     # Apply colorbar
     if scalar_colorbar:
@@ -220,7 +216,28 @@ def plot_nifti(
         sphere = get_sphere(name="repulsion724")  # Use a precomputed sphere
         tensor_matrix = from_lower_triangular(tensor_data)
         eigvals, eigvecs = decompose_tensor(tensor_matrix)
-        tensor_actor = tensor_slicer(evals=eigvals, evecs=eigvecs, sphere=sphere, scale=scale, norm=False)
+        mask = np.ones(tensor_data.shape[:3])
+        centers = np.ascontiguousarray(np.array(np.nonzero(mask)).T)
+
+        # Reshape to N x 3
+        centers = centers.reshape(-1, 3)
+        eigvals = eigvals.reshape(-1, 3)
+        eigvecs = eigvecs.reshape(-1, 3, 3)
+
+        # Only keep centers in extent
+        indices = (centers[:, 0] >= extent[0]) & (centers[:, 0] <= extent[1]) & (centers[:, 1] >= extent[2]) & (centers[:, 1] <= extent[3]) & (centers[:, 2] >= extent[4]) & (centers[:, 2] <= extent[5])
+
+        centers = centers[indices,:]
+        eigvals = eigvals[indices,:]
+        eigvecs = eigvecs[indices,:,:] 
+
+        # Apply affine to centers
+        centers = apply_affine(affine, centers)
+
+        # Get colors
+        colors = _color_fa(_fa(eigvals), eigvecs)
+
+        tensor_actor = ellipsoid(centers=centers, axes=eigvecs, lengths=eigvals, scales=scale*2, colors=colors)
         scene.add(tensor_actor)
 
     # Add orientation distribution function visualization
@@ -229,8 +246,9 @@ def plot_nifti(
         sphere = get_sphere(name="repulsion724")  # Use a precomputed sphere
         sh_order_max = calculate_max_order(odf_data.shape[-1])
         B, _ = sh_to_sf_matrix(sphere=sphere, sh_order_max=sh_order_max, basis_type=sh_basis)
-        odf_actor = odf_slicer(odf_data, sphere=sphere, B_matrix=B, scale=scale, norm=False)
+        odf_actor = odf_slicer(odf_data, sphere=sphere, B_matrix=B, scale=scale, norm=False, affine=odf_affine)
         scene.add(odf_actor)
+        odf_actor.display_extent(*extent)
 
     # Set up camera
     scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=camera_up)
