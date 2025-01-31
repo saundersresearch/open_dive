@@ -58,6 +58,9 @@ def plot_nifti(
     **kwargs
         Additional keyword arguments to pass to fury.actor.slicer
     """
+    # Set slice to int if not "m"
+    if data_slice != "m":
+        data_slice = int(data_slice)
 
     # Load the data and convert to RAS
     nifti = nib.load(nifti_path)
@@ -86,8 +89,6 @@ def plot_nifti(
     # value range
     if value_range is None:
         value_range = [np.min(data), np.max(data)]
-    else:
-        value_range = [value_range[0], value_range[1]]
 
     # Set up slicer and window
     slice_actor = slicer(data, affine=affine, value_range=value_range, **kwargs)
@@ -131,9 +132,7 @@ def plot_nifti(
         
         for i in range(256):
             lut.SetTableValue(i, i / 255.0, i / 255.0, i / 255.0, 1)  # Grayscale colors
-        '''
-        We can further optimize this later to support orther colormaps; this just supports grayscale right now.
-        '''
+
         # Set the full grayscale range (e.g., 0 to 255 for typical image data)
         lut.SetRange(value_range[0], value_range[1])  # This defines the grayscale range explicitly
 
@@ -147,16 +146,12 @@ def plot_nifti(
 
         # Add the scalar bar to the scene
         scene.add(scalar_bar)
+        
     # Add tractography
     if tractography is not None:
         if tractography_cmap is None:
             tractography_cmap = "Set1" if tractography_values is None else "plasma"
         cmap = plt.get_cmap(tractography_cmap)
-
-        try:
-            tractography_opacity = float(tractography_opacity)
-        except:
-            print("[ERROR] invalid opacity value (0,1). ")
 
         # Set to range
         if tractography_values is not None:
@@ -169,11 +164,10 @@ def plot_nifti(
             colors = [cmap(i) for i in range(len(tractography))]
             
         # Add each tractography with its corresponding color
-    for tract_file, color in zip(tractography, colors):
-        streamlines = nib.streamlines.load(tract_file).streamlines
-        print("---------opacity ", tractography_opacity)
-        stream_actor = actor.line(streamlines, colors=color, fake_tube=True, linewidth=0.2, opacity=tractography_opacity)
-        scene.add(stream_actor)
+        for tract_file, color in zip(tractography, colors):
+            streamlines = nib.streamlines.load(tract_file).streamlines
+            stream_actor = actor.line(streamlines, colors=color, fake_tube=True, linewidth=0.2, opacity=tractography_opacity)
+            scene.add(stream_actor)
 
     # Set up camera
     scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=camera_up)

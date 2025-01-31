@@ -78,16 +78,7 @@ def main():
         help="Optional value to use for the tractogram opacity in range (0, 1). Default is 0.6.",
     )
 
-
-
     args = parser.parse_args()
-
-    # Convert slice argument to int if it's not 'm'
-    if args.slice != "m":
-        try:
-            args.slice = int(args.slice)
-        except ValueError:
-            raise ValueError("Slice argument must be either 'm' or an integer")
 
     # Plot the NIFTI
     plot_nifti(
@@ -106,7 +97,5 @@ def main():
         tractography_values=args.tractography_values,
         tractography_cmap=args.tractography_cmap,
         tractography_cmap_range=args.tractography_cmap_range,
-
-
     )
 
