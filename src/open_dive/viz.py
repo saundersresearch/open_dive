@@ -1,6 +1,6 @@
 import nibabel as nib
 import numpy as np
-from dipy.viz import window, actor
+from dipy.viz import window, actor, ui
 from fury.actor import slicer
 from fury.colormap import colormap_lookup_table
 import vtk
@@ -23,6 +23,7 @@ def plot_nifti(
     interactive=True,
     scalar_colorbar=True,
     tractography=None,
+    tractography_opacity = 0.6,
     tractography_values=None,
     tractography_cmap=None,
     tractography_cmap_range=None,
@@ -54,6 +55,8 @@ def plot_nifti(
         Whether to show a scalar colorbar (for FA, T1, etc.), by default True
     tractography : list of str or Path, optional
         Optional tractogram(s) to plot with slices. Can provide multiple files, by default None
+    tractography_opacity : float, optional
+        Optional opacity value for tractograms between (0, 1), by default 0.6
     tractography_values : list of float, optional
         Optional values to color the tractography with, by default None
     tractography_cmap : str, optional
@@ -67,6 +70,9 @@ def plot_nifti(
     **kwargs
         Additional keyword arguments to pass to fury.actor.slicer
     """
+    # Set slice to int if not "m"
+    if data_slice != "m":
+        data_slice = int(data_slice)
 
     # Load the data and convert to RAS
     nifti = nib.load(nifti_path)
@@ -95,8 +101,6 @@ def plot_nifti(
     # value range
     if value_range is None:
         value_range = [np.min(data), np.max(data)]
-    else:
-        value_range = [value_range[0], value_range[1]]
 
     # Set up slicer and window
     slice_actor = slicer(data, affine=affine, value_range=value_range, **kwargs)
@@ -140,9 +144,7 @@ def plot_nifti(
         
         for i in range(256):
             lut.SetTableValue(i, i / 255.0, i / 255.0, i / 255.0, 1)  # Grayscale colors
-        '''
-        We can further optimize this later to support orther colormaps; this just supports grayscale right now.
-        '''
+
         # Set the full grayscale range (e.g., 0 to 255 for typical image data)
         lut.SetRange(value_range[0], value_range[1])  # This defines the grayscale range explicitly
 
@@ -156,6 +158,7 @@ def plot_nifti(
 
         # Add the scalar bar to the scene
         scene.add(scalar_bar)
+        
     # Add tractography
     if tractography is not None:
         if tractography_cmap is None:
@@ -200,12 +203,12 @@ def plot_nifti(
 
             # Add the scalar bar to the scene
             scene.add(tract_bar)
-            
-    # Add each tractography with its corresponding color
-    for tract_file, color in zip(tractography, colors):
-        streamlines = nib.streamlines.load(tract_file).streamlines
-        stream_actor = actor.line(streamlines, colors=color, linewidth=0.2)
-        scene.add(stream_actor)
+                
+        # Add each tractography with its corresponding color
+        for tract_file, color in zip(tractography, colors):
+            streamlines = nib.streamlines.load(tract_file).streamlines
+            stream_actor = actor.line(streamlines, colors=color, linewidth=0.2, opacity=tractography_opacity)
+            scene.add(stream_actor)
     
     # ✅ **Add Diffusion Tensor Visualization (DTI)**
     if tensor_image is not None:
@@ -222,6 +225,7 @@ def plot_nifti(
         sphere = dp.get_sphere("repulsion724")  # Use a precomputed sphere
         odf_actor = odf_slicer(odf_data, sphere=sphere, scale=0.5, norm=False)
         scene.add(odf_actor)
+
     # Set up camera
     scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=camera_up)
 
