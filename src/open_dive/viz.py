@@ -117,18 +117,21 @@ def plot_nifti(
     if orientation == "axial":
         data_slice = data.shape[2] // 2 if data_slice == "m" else data_slice
         extent = (0, data.shape[0], 0, data.shape[1], data_slice, data_slice)
+        offset = np.array([0, 0, scale])
 
         camera_pos = (0, 0, 1)
         camera_up = (0, 1, 0)
     elif orientation == "coronal":
         data_slice = data.shape[1] // 2 if data_slice == "m" else data_slice
         extent = (0, data.shape[0], data_slice, data_slice, 0, data.shape[2])
+        offset = np.array([0, scale, 0])
 
         camera_pos = (0, 1, 0)
         camera_up = (0, 0, 1)
     elif orientation == "sagittal":
         data_slice = data.shape[0] // 2 if data_slice == "m" else data_slice
         extent = (data_slice, data_slice, 0, data.shape[1], 0, data.shape[2])
+        offset = np.array([scale, 0, 0])
 
         camera_pos = (1, 0, 0)
         camera_up = (0, 0, 1)
@@ -232,13 +235,17 @@ def plot_nifti(
         eigvecs = eigvecs[indices,:,:] 
 
         # Apply affine to centers
-        centers = apply_affine(affine, centers)
+        centers = apply_affine(tensor_affine, centers)
 
         # Get colors
         colors = _color_fa(_fa(eigvals), eigvecs)
 
         tensor_actor = ellipsoid(centers=centers, axes=eigvecs, lengths=eigvals, scales=scale*2, colors=colors)
         scene.add(tensor_actor)
+
+        position = tensor_actor.GetPosition()
+        position += offset
+        tensor_actor.SetPosition(position)
 
     # Add orientation distribution function visualization
     if odf_image:
@@ -247,9 +254,14 @@ def plot_nifti(
         sh_order_max = calculate_max_order(odf_data.shape[-1])
         B, _ = sh_to_sf_matrix(sphere=sphere, sh_order_max=sh_order_max, basis_type=sh_basis)
         odf_actor = odf_slicer(odf_data, sphere=sphere, B_matrix=B, scale=scale, norm=False, affine=odf_affine)
+        
         scene.add(odf_actor)
         odf_actor.display_extent(*extent)
 
+        position = odf_actor.GetPosition()
+        position += offset
+        odf_actor.SetPosition(position)
+        
     # Set up camera
     scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=camera_up)
 
