@@ -72,10 +72,14 @@ def main():
     )
     parser.add_argument(
         "--tractography_opacity",
-        "--opacity",
         type=float,
         default=0.6,
         help="Optional value to use for the tractogram opacity in range (0, 1). Default is 0.6.",
+    )
+    parser.add_argument(
+        "--tractography_colorbar",
+        action="store_true",
+        help="Whether to show a tractography values colorbar, by default False",
     )
 
     args = parser.parse_args()
@@ -97,5 +101,6 @@ def main():
         tractography_values=args.tractography_values,
         tractography_cmap=args.tractography_cmap,
         tractography_cmap_range=args.tractography_cmap_range,
+        tractography_colorbar=args.tractography_colorbar,
     )
 
