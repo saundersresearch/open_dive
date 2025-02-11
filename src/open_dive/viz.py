@@ -1,17 +1,19 @@
 import nibabel as nib
 import numpy as np
 from dipy.viz import window, actor
-from fury.actor import slicer
 import vtk
 import matplotlib.pyplot as plt 
-from fury.actor import tensor_slicer, odf_slicer, ellipsoid, _color_fa, _fa
+from fury.actor import slicer, tensor_slicer, odf_slicer, ellipsoid, _color_fa, _fa, contour_from_roi
 from fury.utils import apply_affine, get_bounds
 from dipy.io.image import load_nifti
 from dipy.data import get_sphere
 from dipy.reconst.dti import from_lower_triangular, decompose_tensor
 from dipy.reconst.shm import calculate_max_order, sh_to_sf_matrix
 from dipy.core.geometry import sphere2cart, cart2sphere, rodrigues_axis_rotation
+from dipy.align.reslice import reslice
+from scipy.ndimage import gaussian_filter, binary_dilation
 import cmcrameri
+import line_profiler
 
 def plot_nifti(
     nifti_path=None,
@@ -35,6 +37,7 @@ def plot_nifti(
     odf_image=None,
     sh_basis="descoteaux07",
     scale=1,
+    glass_brain_path=None,
     **kwargs,
 ):
     """Create a 2D rendering of a NIFTI slice.
@@ -81,6 +84,9 @@ def plot_nifti(
         Basis type for the spherical harmonics, either "descoteaux07" or "tournier07", by default "descoteaux07"
     scale : float, optional
         Scale of the tensor glyphs or ODF glyphs, by default 1
+    glass_brain_path : str or Path, optional
+        Optional glass brain mask to overlay, by default None
+
     **kwargs
         Additional keyword arguments to pass to fury.actor.slicer
     """
@@ -274,6 +280,10 @@ def plot_nifti(
         position += offset
         odf_actor.SetPosition(position)
 
+    if glass_brain_path:
+        glass_brain_actor = create_glass_brain(glass_brain_path)
+        scene.add(glass_brain_actor)
+
     if azimuth is not None or elevation is not None:
         scene.reset_camera_tight()
         camera_pos, camera_focal, _ = scene.get_camera()
@@ -310,6 +320,42 @@ def plot_nifti(
     if interactive:
         window.show(scene, size=size, reset_camera=False)
 
+@line_profiler.profile
+def create_glass_brain(mask_nifti):
+    """Create a "glass brain" visualization from a binary mask.
 
+    Parameters
+    ----------
+    mask_nifti : str or Path
+        Path to binary mask NIFTI image
 
+    Returns
+    -------
+    glass_brain : fury.actor.surface
+        Glass brain surface actor
+    """
+    # Load the mask
+    mask_nifti = nib.load(mask_nifti)
+    mask = mask_nifti.get_fdata()
+    affine = mask_nifti.affine
+    zooms = mask_nifti.header.get_zooms()[:3]
 
+    # Step 1: Upsample (regrid) the mask by a factor of 5
+    new_zooms = tuple(z / 5 for z in zooms)
+    mask_up, new_affine = reslice(mask, affine, zooms, new_zooms)
+
+    # Step 2: Apply Gaussian smoothing with standard deviation 2
+    mask_smooth = gaussian_filter(mask_up, sigma=2)
+
+    # Step 3: Threshold the smoothed mask at 0.5
+    mask_thres = (mask_smooth > 0.5).astype(np.uint8)
+
+    # Step 4: Dilate the thresholded mask with 2 passes
+    mask_dilated = binary_dilation(mask_thres, iterations=2).astype(np.uint8)
+
+    # Step 5: Compute the "glass brain" by subtracting thresholded mask from the dilated mask
+    glass_brain = (mask_dilated - mask_thres).astype(np.uint8)
+
+    # Create a surface actor
+    glass_brain_actor = contour_from_roi(glass_brain, affine=new_affine, opacity=0.25, color=(0.5, 0.5, 0.5))
+    return glass_brain_actor
