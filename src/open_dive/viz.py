@@ -11,6 +11,7 @@ from dipy.data import get_sphere
 from dipy.reconst.dti import from_lower_triangular, decompose_tensor
 from dipy.reconst.shm import calculate_max_order, sh_to_sf_matrix
 from dipy.core.geometry import sphere2cart, cart2sphere, rodrigues_axis_rotation
+import cmcrameri
 
 def plot_nifti(
     nifti_path=None,

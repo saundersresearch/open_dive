@@ -82,7 +82,7 @@ def main():
         help="Whether to show a tractography values colorbar, by default False",
     )
 
-    parser.add_argument("--tensor_image", type=Path, help="Path to tensor image, format is Dxx, Dxy, Dyy, Dxz, Dyz, Dzz")
+    parser.add_argument("--tensor_image", type=Path, help="Path to tensor image, format is Dxx, Dxy, Dyy, Dxz, Dyz, Dzz. (Requires --nifti_path to be set).")
     parser.add_argument("--odf_image", type=Path, help="Path to orientation distribution function image represented as spherical harmonics. (Requires --nifti_path to be set).")
     parser.add_argument("--sh_basis", default="descoteaux07", help="Spherical harmonic basis, either 'descoteaux07' (default) or 'tournier07'")
     parser.add_argument("--scale", type=float, default=1, help="Scale of the tensor glyphs or ODF glyphs (default: 1)")
@@ -93,7 +93,7 @@ def main():
 
     # Plot the NIFTI
     plot_nifti(
-        args.nifti_path,
+        nifti_path=args.nifti_path,
         data_slice=args.slice,
         orientation=args.orientation,
         size=args.size,
