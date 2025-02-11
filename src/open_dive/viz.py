@@ -13,7 +13,7 @@ from dipy.reconst.shm import calculate_max_order, sh_to_sf_matrix
 from dipy.core.geometry import sphere2cart, cart2sphere, rodrigues_axis_rotation
 
 def plot_nifti(
-    nifti_path,
+    nifti_path=None,
     data_slice="m",
     orientation="axial",
     size=(600, 400),
@@ -83,91 +83,95 @@ def plot_nifti(
     **kwargs
         Additional keyword arguments to pass to fury.actor.slicer
     """
+    scene = window.Scene()
+
     # Set slice to int if not "m"
     if data_slice != "m":
         data_slice = int(data_slice)
 
-    # Load the data and convert to RAS
-    nifti = nib.load(nifti_path)
-    nifti = nib.as_closest_canonical(nifti)
-    data = nifti.get_fdata()
+    if nifti_path is not None:
+        # Load the data and convert to RAS
+        nifti = nib.load(nifti_path)
+        nifti = nib.as_closest_canonical(nifti)
+        data = nifti.get_fdata()
 
-    if len(data.shape) == 4:
-        if volume_idx is None:
+        if len(data.shape) == 4:
+            if volume_idx is None:
+                raise ValueError(
+                    "Input is a 4D image but no volume index specified. "
+                    "Please provide a volume_idx parameter to select which 3D volume to display."
+                )
+            if not 0 <= volume_idx < data.shape[3]:
+                raise ValueError(
+                    f"volume_idx {volume_idx} is out of bounds for image with {data.shape[3]} volumes"
+                )
+            data = data[..., volume_idx]
+        elif len(data.shape) != 3:
             raise ValueError(
-                "Input is a 4D image but no volume index specified. "
-                "Please provide a volume_idx parameter to select which 3D volume to display."
+                f"Expected 3D or 4D image, but got image with {len(data.shape)} dimensions"
             )
-        if not 0 <= volume_idx < data.shape[3]:
-            raise ValueError(
-                f"volume_idx {volume_idx} is out of bounds for image with {data.shape[3]} volumes"
-            )
-        data = data[..., volume_idx]
-    elif len(data.shape) != 3:
-        raise ValueError(
-            f"Expected 3D or 4D image, but got image with {len(data.shape)} dimensions"
-        )
 
-    # Get the data and affine
-    affine = nifti.affine
+        # Get the data and affine
+        affine = nifti.affine
 
-    # value range
-    if value_range is None:
-        value_range = [np.min(data), np.max(data)]
+        # value range
+        if value_range is None:
+            value_range = [np.min(data), np.max(data)]
 
-    # Set up slicer and window
-    slice_actor = slicer(data, value_range=value_range, affine=affine, **kwargs)
-    scene = window.Scene()
-    scene.add(slice_actor)
+        # Set up slicer and window
+        slice_actor = slicer(data, value_range=value_range, affine=affine, **kwargs)
+        scene.add(slice_actor)
 
-    # Get slice if not defined
-    if orientation == "axial":
-        data_slice = data.shape[2] // 2 if data_slice == "m" else data_slice
-        extent = (0, data.shape[0], 0, data.shape[1], data_slice, data_slice)
-        offset = np.array([0, 0, scale])
+        # Get slice if not defined
+        if orientation == "axial":
+            data_slice = data.shape[2] // 2 if data_slice == "m" else data_slice
+            extent = (0, data.shape[0], 0, data.shape[1], data_slice, data_slice)
+            offset = np.array([0, 0, scale])
 
-        camera_pos = (0, 0, 1)
-        camera_up = (0, 1, 0)
-    elif orientation == "coronal":
-        data_slice = data.shape[1] // 2 if data_slice == "m" else data_slice
-        extent = (0, data.shape[0], data_slice, data_slice, 0, data.shape[2])
-        offset = np.array([0, scale, 0])
+            camera_pos = (0, 0, 1)
+            camera_up = (0, 1, 0)
+        elif orientation == "coronal":
+            data_slice = data.shape[1] // 2 if data_slice == "m" else data_slice
+            extent = (0, data.shape[0], data_slice, data_slice, 0, data.shape[2])
+            offset = np.array([0, scale, 0])
 
-        camera_pos = (0, 1, 0)
-        camera_up = (0, 0, 1)
-    elif orientation == "sagittal":
-        data_slice = data.shape[0] // 2 if data_slice == "m" else data_slice
-        extent = (data_slice, data_slice, 0, data.shape[1], 0, data.shape[2])
-        offset = np.array([scale, 0, 0])
+            camera_pos = (0, 1, 0)
+            camera_up = (0, 0, 1)
+        elif orientation == "sagittal":
+            data_slice = data.shape[0] // 2 if data_slice == "m" else data_slice
+            extent = (data_slice, data_slice, 0, data.shape[1], 0, data.shape[2])
+            offset = np.array([scale, 0, 0])
 
-        camera_pos = (1, 0, 0)
-        camera_up = (0, 0, 1)
-    camera_focal = (0, 0, 0)
-    slice_actor.display_extent(*extent)
+            camera_pos = (1, 0, 0)
+            camera_up = (0, 0, 1)
+        camera_focal = (0, 0, 0)
 
-    # Apply colorbar
-    if scalar_colorbar:
-        # Create a grayscale colormap (from black to white)
-        lut = vtk.vtkLookupTable()
-        lut.SetNumberOfTableValues(256)  # Full grayscale (256 levels)
-        lut.Build()  # Initialize the LUT
-        
-        for i in range(256):
-            lut.SetTableValue(i, i / 255.0, i / 255.0, i / 255.0, 1)  # Grayscale colors
+        if nifti_path is not None:
+            slice_actor.display_extent(*extent)
 
-        # Set the full grayscale range (e.g., 0 to 255 for typical image data)
-        lut.SetRange(value_range[0], value_range[1])  # This defines the grayscale range explicitly
+        # Apply colorbar
+        if scalar_colorbar:
+            # Create a grayscale colormap (from black to white)
+            lut = vtk.vtkLookupTable()
+            lut.SetNumberOfTableValues(256)  # Full grayscale (256 levels)
+            lut.Build()  # Initialize the LUT
+            
+            for i in range(256):
+                lut.SetTableValue(i, i / 255.0, i / 255.0, i / 255.0, 1)  # Grayscale colors
 
-        # Create the scalar bar (colorbar)
-        scalar_bar = vtk.vtkScalarBarActor()
-        scalar_bar.SetLookupTable(lut)  # Attach the grayscale LUT
-        scalar_bar.SetLabelFormat("%.0f")  # Integer labels (0, 1, 2, ... 255)
-        scalar_bar.SetPosition(0.8, 0.1)  # Position of the colorbar
-        scalar_bar.SetHeight(0.5)  # Adjust height (increase size)
-        scalar_bar.SetWidth(0.1)   # Adjust width (increase size)
+            # Set the full grayscale range (e.g., 0 to 255 for typical image data)
+            lut.SetRange(value_range[0], value_range[1])  # This defines the grayscale range explicitly
 
-        # Add the scalar bar to the scene
-        scene.add(scalar_bar)
+            # Create the scalar bar (colorbar)
+            scalar_bar = vtk.vtkScalarBarActor()
+            scalar_bar.SetLookupTable(lut)  # Attach the grayscale LUT
+            scalar_bar.SetLabelFormat("%.0f")  # Integer labels (0, 1, 2, ... 255)
+            scalar_bar.SetPosition(0.8, 0.1)  # Position of the colorbar
+            scalar_bar.SetHeight(0.5)  # Adjust height (increase size)
+            scalar_bar.SetWidth(0.1)   # Adjust width (increase size)
+
+            # Add the scalar bar to the scene
+            scene.add(scalar_bar)
         
     # Add tractography
     if tractography is not None:
@@ -291,17 +295,10 @@ def plot_nifti(
         camera_pos = sphere2cart(camera_pos_r, camera_pos_theta, camera_pos_phi)
         camera_pos = np.array(camera_pos)
         view_up = sphere2cart(view_up_r, view_up_theta, view_up_phi)
-        view_up = np.array(view_up)
-
+        view_up = np.array(view_up) 
 
         scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=view_up)
 
-        # Set camera
-        print(scene.camera_info())
-        # if azimuth is not None:
-        #     scene.azimuth(azimuth)
-        # if elevation is not None:
-        #     scene.elevation(elevation)
     else:
         scene.reset_camera()
 

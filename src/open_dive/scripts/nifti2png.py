@@ -7,7 +7,7 @@ from open_dive.viz import plot_nifti
 def main():
     # Create args
     parser = argparse.ArgumentParser(description="Plot a slice of a NIFTI file")
-    parser.add_argument("nifti_path", type=Path, help="Path to NIFTI to plot")
+    parser.add_argument("-n", "--nifti_path", type=Path, help="Path to NIFTI to plot")
     parser.add_argument(
         "-s", "--slice", default="m", help='Slice index (integer) or "m" for middle slice'
     )
@@ -83,7 +83,7 @@ def main():
     )
 
     parser.add_argument("--tensor_image", type=Path, help="Path to tensor image, format is Dxx, Dxy, Dyy, Dxz, Dyz, Dzz")
-    parser.add_argument("--odf_image", type=Path, help="Path to orientation distribution function image represented as spherical harmonicss")
+    parser.add_argument("--odf_image", type=Path, help="Path to orientation distribution function image represented as spherical harmonics. (Requires --nifti_path to be set).")
     parser.add_argument("--sh_basis", default="descoteaux07", help="Spherical harmonic basis, either 'descoteaux07' (default) or 'tournier07'")
     parser.add_argument("--scale", type=float, default=1, help="Scale of the tensor glyphs or ODF glyphs (default: 1)")
     parser.add_argument("--azimuth", "--az", type=float, default=0, help="Azimuthal angle of the view (default: 0)")
