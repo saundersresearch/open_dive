@@ -62,7 +62,7 @@ def main():
     )
     parser.add_argument(
         "--tractography_cmap",
-        help="Matplotlib colormap to use for tractography. Default is plasma if tractograph_values is provided, otherwise Set1.",
+        help="Matplotlib or cmcrameri colormap to use for tractography. Default is plasma if tractograph_values is provided, otherwise Set1.",
     )
     parser.add_argument(
         "--tractography_cmap_range",
@@ -86,6 +86,7 @@ def main():
     parser.add_argument("--odf_image", type=Path, help="Path to orientation distribution function image represented as spherical harmonics. (Requires --nifti_path to be set).")
     parser.add_argument("--sh_basis", default="descoteaux07", help="Spherical harmonic basis, either 'descoteaux07' (default) or 'tournier07'")
     parser.add_argument("--scale", type=float, default=1, help="Scale of the tensor glyphs or ODF glyphs (default: 1)")
+    parser.add_argument("--glass_brain", type=Path, help="Path to binary mask to generate glass brain from.")
     parser.add_argument("--azimuth", "--az", type=float, default=0, help="Azimuthal angle of the view (default: 0)")
     parser.add_argument("--elevation", "--el", type=float, default=0, help="Elevation angle of the view (default: 0)")
 
@@ -115,5 +116,6 @@ def main():
         scale=args.scale,
         azimuth=args.azimuth,
         elevation=args.elevation,
+        glass_brain_path=args.glass_brain,
     )
 
