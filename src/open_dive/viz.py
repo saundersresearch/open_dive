@@ -3,7 +3,7 @@ import numpy as np
 from dipy.viz import window, actor
 import vtk
 import matplotlib.pyplot as plt 
-from fury.actor import slicer, tensor_slicer, odf_slicer, ellipsoid, _color_fa, _fa, contour_from_roi
+from fury.actor import slicer, tensor_slicer, odf_slicer, ellipsoid, _color_fa, _fa, contour_from_roi, surface
 from fury.utils import apply_affine, get_bounds
 from dipy.io.image import load_nifti
 from dipy.data import get_sphere
@@ -12,6 +12,7 @@ from dipy.reconst.shm import calculate_max_order, sh_to_sf_matrix
 from dipy.core.geometry import sphere2cart, cart2sphere, rodrigues_axis_rotation
 from dipy.align.reslice import reslice
 from scipy.ndimage import gaussian_filter, binary_dilation
+from skimage.measure import marching_cubes
 import cmcrameri
 import line_profiler
 
@@ -321,13 +322,21 @@ def plot_nifti(
         window.show(scene, size=size, reset_camera=False)
 
 @line_profiler.profile
-def create_glass_brain(mask_nifti):
+def create_glass_brain(mask_nifti, resample_factor=2, smooth_sigma=2, dilation_iters=2, opacity=0.33):
     """Create a "glass brain" visualization from a binary mask.
 
     Parameters
     ----------
     mask_nifti : str or Path
         Path to binary mask NIFTI image
+    resample_factor : int, optional
+        Factor to upsample the mask by, by default 3
+    smooth_sigma : float, optional
+        Standard deviation for Gaussian smoothing, by default 2
+    dilation_iters : int, optional
+        Number of iterations for binary dilation, by default 2
+    opacity : float, optional
+        Opacity of the glass brain, by default 0.33
 
     Returns
     -------
@@ -341,21 +350,18 @@ def create_glass_brain(mask_nifti):
     zooms = mask_nifti.header.get_zooms()[:3]
 
     # Step 1: Upsample (regrid) the mask by a factor of 5
-    new_zooms = tuple(z / 5 for z in zooms)
+    new_zooms = tuple(z / resample_factor for z in zooms)
     mask_up, new_affine = reslice(mask, affine, zooms, new_zooms)
 
     # Step 2: Apply Gaussian smoothing with standard deviation 2
-    mask_smooth = gaussian_filter(mask_up, sigma=2)
+    mask_smooth = gaussian_filter(mask_up, sigma=smooth_sigma)
 
     # Step 3: Threshold the smoothed mask at 0.5
     mask_thres = (mask_smooth > 0.5).astype(np.uint8)
 
     # Step 4: Dilate the thresholded mask with 2 passes
-    mask_dilated = binary_dilation(mask_thres, iterations=2).astype(np.uint8)
-
-    # Step 5: Compute the "glass brain" by subtracting thresholded mask from the dilated mask
-    glass_brain = (mask_dilated - mask_thres).astype(np.uint8)
+    mask_dilated = binary_dilation(mask_thres, iterations=dilation_iters).astype(np.uint8)
 
     # Create a surface actor
-    glass_brain_actor = contour_from_roi(glass_brain, affine=new_affine, opacity=0.25, color=(0.5, 0.5, 0.5))
+    glass_brain_actor = contour_from_roi(mask_dilated, affine=new_affine, opacity=opacity, color=(0.5, 0.5, 0.5))
     return glass_brain_actor
