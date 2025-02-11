@@ -86,6 +86,8 @@ def main():
     parser.add_argument("--odf_image", type=Path, help="Path to orientation distribution function image represented as spherical harmonicss")
     parser.add_argument("--sh_basis", default="descoteaux07", help="Spherical harmonic basis, either 'descoteaux07' (default) or 'tournier07'")
     parser.add_argument("--scale", type=float, default=1, help="Scale of the tensor glyphs or ODF glyphs (default: 1)")
+    parser.add_argument("--azimuth", "--az", type=float, default=0, help="Azimuthal angle of the view (default: 0)")
+    parser.add_argument("--elevation", "--el", type=float, default=0, help="Elevation angle of the view (default: 0)")
 
     args = parser.parse_args()
 
@@ -111,5 +113,7 @@ def main():
         odf_image=args.odf_image,
         sh_basis=args.sh_basis,
         scale=args.scale,
+        azimuth=args.azimuth,
+        elevation=args.elevation,
     )
 

@@ -5,17 +5,20 @@ from fury.actor import slicer
 import vtk
 import matplotlib.pyplot as plt 
 from fury.actor import tensor_slicer, odf_slicer, ellipsoid, _color_fa, _fa
-from fury.utils import apply_affine
+from fury.utils import apply_affine, get_bounds
 from dipy.io.image import load_nifti
 from dipy.data import get_sphere
 from dipy.reconst.dti import from_lower_triangular, decompose_tensor
 from dipy.reconst.shm import calculate_max_order, sh_to_sf_matrix
+from dipy.core.geometry import sphere2cart, cart2sphere, rodrigues_axis_rotation
 
 def plot_nifti(
     nifti_path,
     data_slice="m",
     orientation="axial",
     size=(600, 400),
+    azimuth=None,
+    elevation=None,
     value_range=None,
     save_path=None,
     interactive=True,
@@ -45,6 +48,10 @@ def plot_nifti(
         Can be "axial", "sagittal" or "coronal", by default "axial"
     size : tuple, optional
         Size of window, by default (600,400)
+    azimuth : float, optional
+        Azimuth angle in degrees, by default None
+    elevation : float, optional
+        Elevation angle in degrees, by default None
     save_path : str or Path, optional
         Optional path to save to, by default None
     interactive : bool, optional
@@ -261,16 +268,49 @@ def plot_nifti(
         position = odf_actor.GetPosition()
         position += offset
         odf_actor.SetPosition(position)
-        
-    # Set up camera
-    scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=camera_up)
+
+    if azimuth is not None or elevation is not None:
+        scene.reset_camera_tight()
+        camera_pos, camera_focal, _ = scene.get_camera()
+        view_up = (0, 1, 0)
+
+        # Subtract focal point to get camera position
+        camera_pos = np.array(camera_pos)
+        camera_pos_r, camera_pos_theta, camera_pos_phi = cart2sphere(*camera_pos)
+        view_up_r, view_up_theta, view_up_phi = cart2sphere(*view_up)
+
+        # # Rotate by azimuth
+        camera_pos_phi += np.deg2rad(azimuth) 
+        view_up_phi += np.deg2rad(azimuth)
+
+        # Rotate by elevation (theta)
+        camera_pos_theta -= np.deg2rad(elevation)
+        view_up_theta -= np.deg2rad(elevation)
+
+        # Convert back to cartesian
+        camera_pos = sphere2cart(camera_pos_r, camera_pos_theta, camera_pos_phi)
+        camera_pos = np.array(camera_pos)
+        view_up = sphere2cart(view_up_r, view_up_theta, view_up_phi)
+        view_up = np.array(view_up)
+
+
+        scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=view_up)
+
+        # Set camera
+        print(scene.camera_info())
+        # if azimuth is not None:
+        #     scene.azimuth(azimuth)
+        # if elevation is not None:
+        #     scene.elevation(elevation)
+    else:
+        scene.reset_camera()
 
     # Show the scene
     if save_path:
-        window.record(scene=scene, out_path=save_path, size=size, reset_camera=True)
+        window.record(scene=scene, out_path=save_path, size=size, reset_camera=False)
 
     if interactive:
-        window.show(scene, size=size, reset_camera=True)
+        window.show(scene, size=size, reset_camera=False)
 
 
 
