@@ -7,7 +7,7 @@ from open_dive.viz import plot_nifti
 def main():
     # Create args
     parser = argparse.ArgumentParser(description="Plot a slice of a NIFTI file")
-    parser.add_argument("nifti_path", type=Path, help="Path to NIFTI to plot")
+    parser.add_argument("-n", "--nifti_path", type=Path, help="Path to NIFTI to plot")
     parser.add_argument(
         "-s", "--slice", default="m", help='Slice index (integer) or "m" for middle slice'
     )
@@ -62,7 +62,7 @@ def main():
     )
     parser.add_argument(
         "--tractography_cmap",
-        help="Matplotlib colormap to use for tractography. Default is plasma if tractograph_values is provided, otherwise Set1.",
+        help="Matplotlib or cmcrameri colormap to use for tractography. Default is plasma if tractograph_values is provided, otherwise Set1.",
     )
     parser.add_argument(
         "--tractography_cmap_range",
@@ -82,16 +82,19 @@ def main():
         help="Whether to show a tractography values colorbar, by default False",
     )
 
-    parser.add_argument("--tensor_image", type=Path, help="Path to tensor image, format is Dxx, Dxy, Dyy, Dxz, Dyz, Dzz")
-    parser.add_argument("--odf_image", type=Path, help="Path to orientation distribution function image represented as spherical harmonicss")
+    parser.add_argument("--tensor_image", type=Path, help="Path to tensor image, format is Dxx, Dxy, Dyy, Dxz, Dyz, Dzz. (Requires --nifti_path to be set).")
+    parser.add_argument("--odf_image", type=Path, help="Path to orientation distribution function image represented as spherical harmonics. (Requires --nifti_path to be set).")
     parser.add_argument("--sh_basis", default="descoteaux07", help="Spherical harmonic basis, either 'descoteaux07' (default) or 'tournier07'")
     parser.add_argument("--scale", type=float, default=1, help="Scale of the tensor glyphs or ODF glyphs (default: 1)")
+    parser.add_argument("--glass_brain", type=Path, help="Path to binary mask to generate glass brain from.")
+    parser.add_argument("--azimuth", "--az", type=float, default=0, help="Azimuthal angle of the view (default: 0)")
+    parser.add_argument("--elevation", "--el", type=float, default=0, help="Elevation angle of the view (default: 0)")
 
     args = parser.parse_args()
 
     # Plot the NIFTI
     plot_nifti(
-        args.nifti_path,
+        nifti_path=args.nifti_path,
         data_slice=args.slice,
         orientation=args.orientation,
         size=args.size,
@@ -111,5 +114,8 @@ def main():
         odf_image=args.odf_image,
         sh_basis=args.sh_basis,
         scale=args.scale,
+        azimuth=args.azimuth,
+        elevation=args.elevation,
+        glass_brain_path=args.glass_brain,
     )
 

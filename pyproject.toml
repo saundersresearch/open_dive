@@ -9,8 +9,10 @@ description = "OpenDIVE (Open Diffusion Imaging Visualization for Everyone) is a
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "cmcrameri>=1.9",
     "dipy>=1.10.0",
     "fury>=0.12.0",
+    "scikit-image>=0.25.1",
 ]
 maintainers = [
     {name = "Adam Saunders", email = "adam.m.saunders@vanderbilt.edu"},
