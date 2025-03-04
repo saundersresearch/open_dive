@@ -8,7 +8,7 @@ Aim 1: [We propose a colorblind-friendly colormap for diffusion MRI images.](htt
 
 Aim 2: We generate a standardized display for anatomical images to overlay the diffusion models based on user input, including support for multiple track files, color maps, and illustration of bundle summary metrics (p-value, volume, effect size, etc.) per bundle.
 
-For FAQs related to diffusion MRI, see our diffusion FAQ issue (#4).
+For FAQs related to diffusion MRI, see our [diffusion FAQ discussion](https://github.com/MASILab/open_dive/discussions/47).
 
 ## Installation
 
