@@ -303,7 +303,7 @@ def plot_nifti(
         azimuth = 180 if azimuth is None else azimuth
         elevation = 90 if elevation is None else elevation
     elif orientation == "sagittal":
-        azimuth = -90 if azimuth is None else azimuth
+        azimuth = 90 if azimuth is None else azimuth
         elevation = 90 if elevation is None else elevation
 
     if (azimuth is not None or elevation is not None) and scene_bound_data is not None:
