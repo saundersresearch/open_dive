@@ -9,12 +9,10 @@ from dipy.io.image import load_nifti
 from dipy.data import get_sphere
 from dipy.reconst.dti import from_lower_triangular, decompose_tensor
 from dipy.reconst.shm import calculate_max_order, sh_to_sf_matrix
-from dipy.core.geometry import sphere2cart, cart2sphere, rodrigues_axis_rotation
+from dipy.core.geometry import sphere2cart, cart2sphere
 from dipy.align.reslice import reslice
 from scipy.ndimage import gaussian_filter, binary_dilation
-from skimage.measure import marching_cubes
 import cmcrameri
-import line_profiler
 
 def plot_nifti(
     nifti_path=None,
@@ -136,24 +134,25 @@ def plot_nifti(
             extent = (0, data.shape[0], 0, data.shape[1], data_slice, data_slice)
             offset = np.array([0, 0, scale])
 
-            camera_pos = (0, 0, 1)
-            camera_up = (0, 1, 0)
+            azimuth = 0 if azimuth is None else azimuth
+            elevation = 0 if elevation is None else elevation
+
         elif orientation == "coronal":
             data_slice = data.shape[1] // 2 if data_slice == "m" else data_slice
             extent = (0, data.shape[0], data_slice, data_slice, 0, data.shape[2])
             offset = np.array([0, scale, 0])
 
-            camera_pos = (0, 1, 0)
-            camera_up = (0, 0, 1)
+            azimuth = 90 if azimuth is None else azimuth
+            elevation = 90 if elevation is None else elevation
+
         elif orientation == "sagittal":
             data_slice = data.shape[0] // 2 if data_slice == "m" else data_slice
             extent = (data_slice, data_slice, 0, data.shape[1], 0, data.shape[2])
             offset = np.array([scale, 0, 0])
 
-            camera_pos = (1, 0, 0)
-            camera_up = (0, 0, 1)
-        camera_focal = (0, 0, 0)
-
+            azimuth = 0 if azimuth is None else azimuth
+            elevation = 90 if elevation is None else elevation
+    
         if nifti_path is not None:
             slice_actor.display_extent(*extent)
 
@@ -286,33 +285,100 @@ def plot_nifti(
         scene.add(glass_brain_actor)
 
     if azimuth is not None or elevation is not None:
-        scene.reset_camera_tight()
-        camera_pos, camera_focal, _ = scene.get_camera()
-        view_up = (0, 1, 0)
+        camera_pos = np.array([0, 0, 1])
+        camera_focal = np.array([0, 0, 0])
+        camera_up = np.array([0, 1, 0])
 
-        # Subtract focal point to get camera position
-        camera_pos = np.array(camera_pos)
+        # Rotate around the focal point by azimuth
         camera_pos_r, camera_pos_theta, camera_pos_phi = cart2sphere(*camera_pos)
-        view_up_r, view_up_theta, view_up_phi = cart2sphere(*view_up)
+        camera_up_r, camera_up_theta, camera_up_phi = cart2sphere(*camera_up)
 
-        # # Rotate by azimuth
-        camera_pos_phi += np.deg2rad(azimuth) 
-        view_up_phi += np.deg2rad(azimuth)
+        camera_pos_phi += np.deg2rad(azimuth)
+        camera_up_phi += np.deg2rad(azimuth)
 
-        # Rotate by elevation (theta)
+
+        # Rotate by elevation
         camera_pos_theta -= np.deg2rad(elevation)
-        view_up_theta -= np.deg2rad(elevation)
+        camera_up_theta -= np.deg2rad(elevation)
 
         # Convert back to cartesian
         camera_pos = sphere2cart(camera_pos_r, camera_pos_theta, camera_pos_phi)
-        camera_pos = np.array(camera_pos)
-        view_up = sphere2cart(view_up_r, view_up_theta, view_up_phi)
-        view_up = np.array(view_up) 
+        camera_up = sphere2cart(camera_up_r, camera_up_theta, camera_up_phi)
 
-        scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=view_up)
+        camera_pos = 2*np.array(camera_pos) + np.array([data.shape[0] // 2, data.shape[1] // 2, data.shape[2] // 2])
+        camera_up = np.array(camera_up)
+        camera_focal = np.array([data.shape[0] // 2, data.shape[1] // 2, data.shape[2] // 2])
+
+        camera_pos = apply_affine(affine, camera_pos)
+        camera_focal = apply_affine(affine, camera_focal)
+        print(f'{camera_pos=}, {camera_focal=}')
+        print(affine)
+        # view_up = [0,1,0]
+
+        scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=camera_up)
+        # scene.elevation(elevation)
+
+        # # Subtract focal point to get camera position
+        # camera_pos = np.array(camera_pos)
+        # camera_pos_r, camera_pos_theta, camera_pos_phi = cart2sphere(*camera_pos)
+        # view_up_r, view_up_theta, view_up_phi = cart2sphere(*view_up)
+
+        # # Rotate by azimuth
+        # camera_pos_phi += np.deg2rad(azimuth) 
+        # view_up_phi += np.deg2rad(azimuth)
+
+        # # Rotate by elevation (theta)
+        # camera_pos_theta -= np.deg2rad(elevation)
+        # view_up_theta -= np.deg2rad(elevation)
+
+        # # Convert back to cartesian
+        # # camera_pos = sphere2cart(camera_pos_r, camera_pos_theta, camera_pos_phi)
+        # # camera_pos = np.array(camera_pos)
+        # # view_up = sphere2cart(view_up_r, view_up_theta, view_up_phi)
+        # view_up = np.array(view_up) 
+
+        # scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=view_up)
+
+        # scene.azimuth(elevation)  
+        # scene.elevation(azimuth)        
+
+        view_up = [0,1,0]
+        # scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=view_up)
+
+
+        # scene.roll(roll)  
+
+        # # Set only view up
+        # camera_pos, camera_focal, _ = scene.get_camera()
+        # scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=view_up)
+        # print(scene.get_camera())
+
 
     else:
-        scene.reset_camera()
+        pass
+        # scene.reset_camera()
+        # print(f'{camera_pos=}, {camera_focal=}, {camera_up=}')
+        # scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=camera_up)
+        
+        
+        # if orientation == 'axial':
+        #     camera_pos = affine[:3, 2] / np.linalg.norm(affine[:3, 2])
+        #     camera_up = affine[:3, 1] / np.linalg.norm(affine[:3, 1])
+
+        # elif orientation == 'coronal':
+
+        #     camera_pos = affine[:3, 1] / np.linalg.norm(affine[:3, 1])
+        #     camera_up = affine[:3, 2] / np.linalg.norm(affine[:3, 2])
+            
+        
+        # elif orientation == 'sagittal':
+            
+        #     camera_pos = affine[:3, 0] / np.linalg.norm(affine[:3, 0])
+        #     camera_up = affine[:3, 2] / np.linalg.norm(affine[:3, 2])
+            
+        # scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=camera_up)
+
+    # scene.zoom(1.5)
 
     # Show the scene
     if save_path:
@@ -321,7 +387,6 @@ def plot_nifti(
     if interactive:
         window.show(scene, size=size, reset_camera=False)
 
-@line_profiler.profile
 def create_glass_brain(mask_nifti, resample_factor=2, smooth_sigma=2, dilation_iters=2, opacity=0.33):
     """Create a "glass brain" visualization from a binary mask.
 
