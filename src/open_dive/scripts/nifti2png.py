@@ -18,7 +18,7 @@ def main():
         help='Can be "axial", "sagittal" or "coronal"',
     )
     parser.add_argument(
-        "--size", default=(600, 400), help="Size of window, by default (600,400)"
+        "--size", type=int, nargs=2, default=(600, 400), help="Size of window, by default (600,400)"
     )
     parser.add_argument("--save_path", help="Optional path to save to")
     parser.add_argument(
@@ -87,8 +87,8 @@ def main():
     parser.add_argument("--sh_basis", default="descoteaux07", help="Spherical harmonic basis, either 'descoteaux07' (default) or 'tournier07'")
     parser.add_argument("--scale", type=float, default=1, help="Scale of the tensor glyphs or ODF glyphs (default: 1)")
     parser.add_argument("--glass_brain", type=Path, help="Path to binary mask to generate glass brain from.")
-    parser.add_argument("--azimuth", "--az", type=float, default=0, help="Azimuthal angle of the view (default: 0)")
-    parser.add_argument("--elevation", "--el", type=float, default=0, help="Elevation angle of the view (default: 0)")
+    parser.add_argument("--azimuth", "--az", type=float, default=None, help="Azimuthal angle of the view (default: None)")
+    parser.add_argument("--elevation", "--el", type=float, default=None, help="Elevation angle of the view (default: None)")
 
     args = parser.parse_args()
 
