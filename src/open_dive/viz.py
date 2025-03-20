@@ -9,12 +9,10 @@ from dipy.io.image import load_nifti
 from dipy.data import get_sphere
 from dipy.reconst.dti import from_lower_triangular, decompose_tensor
 from dipy.reconst.shm import calculate_max_order, sh_to_sf_matrix
-from dipy.core.geometry import sphere2cart, cart2sphere, rodrigues_axis_rotation
+from dipy.core.geometry import sphere2cart, cart2sphere
 from dipy.align.reslice import reslice
 from scipy.ndimage import gaussian_filter, binary_dilation
-from skimage.measure import marching_cubes
 import cmcrameri
-import line_profiler
 
 def plot_nifti(
     nifti_path=None,
@@ -93,6 +91,10 @@ def plot_nifti(
     """
     scene = window.Scene()
 
+    # Variable to store size of things we are rendering
+    scene_bound_data = None
+    scene_bound_affine = None
+
     # Set slice to int if not "m"
     if data_slice != "m":
         data_slice = int(data_slice)
@@ -102,6 +104,9 @@ def plot_nifti(
         nifti = nib.load(nifti_path)
         nifti = nib.as_closest_canonical(nifti)
         data = nifti.get_fdata()
+
+        scene_bound_data = data
+        scene_bound_affine = nifti.affine
 
         if len(data.shape) == 4:
             if volume_idx is None:
@@ -136,24 +141,16 @@ def plot_nifti(
             extent = (0, data.shape[0], 0, data.shape[1], data_slice, data_slice)
             offset = np.array([0, 0, scale])
 
-            camera_pos = (0, 0, 1)
-            camera_up = (0, 1, 0)
         elif orientation == "coronal":
             data_slice = data.shape[1] // 2 if data_slice == "m" else data_slice
             extent = (0, data.shape[0], data_slice, data_slice, 0, data.shape[2])
             offset = np.array([0, scale, 0])
 
-            camera_pos = (0, 1, 0)
-            camera_up = (0, 0, 1)
         elif orientation == "sagittal":
             data_slice = data.shape[0] // 2 if data_slice == "m" else data_slice
             extent = (data_slice, data_slice, 0, data.shape[1], 0, data.shape[2])
             offset = np.array([scale, 0, 0])
-
-            camera_pos = (1, 0, 0)
-            camera_up = (0, 0, 1)
-        camera_focal = (0, 0, 0)
-
+    
         if nifti_path is not None:
             slice_actor.display_extent(*extent)
 
@@ -228,7 +225,8 @@ def plot_nifti(
                 
         # Add each tractography with its corresponding color
         for tract_file, color in zip(tractography, colors):
-            streamlines = nib.streamlines.load(tract_file).streamlines
+            streamlines_nifti = nib.streamlines.load(tract_file)
+            streamlines = streamlines_nifti.streamlines
             stream_actor = actor.line(streamlines, colors=color, linewidth=0.2, opacity=tractography_opacity)
             scene.add(stream_actor)
     
@@ -266,6 +264,10 @@ def plot_nifti(
         position += offset
         tensor_actor.SetPosition(position)
 
+        if scene_bound_data is None:
+            scene_bound_data = mask
+            scene_bound_affine = tensor_affine
+
     # Add orientation distribution function visualization
     if odf_image:
         odf_data, odf_affine = load_nifti(odf_image)
@@ -281,12 +283,62 @@ def plot_nifti(
         position += offset
         odf_actor.SetPosition(position)
 
+        if scene_bound_data is None:
+            scene_bound_data = odf_data
+            scene_bound_affine = odf_affine
+
     if glass_brain_path:
         glass_brain_actor = create_glass_brain(glass_brain_path)
         scene.add(glass_brain_actor)
+        
+        if scene_bound_data is None:
+            glass_brain = nib.load(glass_brain_path)
+            scene_bound_data = np.ones_like(glass_brain.get_fdata())
+            scene_bound_affine = glass_brain.affine
 
-    if azimuth is not None or elevation is not None:
-        scene.reset_camera_tight()
+    if orientation == "axial":
+        azimuth = 0 if azimuth is None else azimuth
+        elevation = 0 if elevation is None else elevation
+    elif orientation == "coronal":
+        azimuth = 180 if azimuth is None else azimuth
+        elevation = 90 if elevation is None else elevation
+    elif orientation == "sagittal":
+        azimuth = 90 if azimuth is None else azimuth
+        elevation = 90 if elevation is None else elevation
+
+    if (azimuth is not None or elevation is not None) and scene_bound_data is not None:
+        camera_pos = np.array([0, 0, 1])
+        camera_focal = np.array([0, 0, 0])
+        camera_up = np.array([0, 1, 0])
+
+        camera_pos_r, camera_pos_theta, camera_pos_phi = cart2sphere(*camera_pos)
+        camera_up_r, camera_up_theta, camera_up_phi = cart2sphere(*camera_up)
+
+        # Rotate by azimuth
+        camera_pos_phi += np.deg2rad(azimuth)
+        camera_up_phi += np.deg2rad(azimuth)
+
+        # Rotate by elevation
+        camera_pos_theta -= np.deg2rad(elevation)
+        camera_pos_phi += np.deg2rad(90)
+        camera_up_theta -= np.deg2rad(elevation)
+
+        # Convert back to cartesian
+        camera_pos = sphere2cart(camera_pos_r, camera_pos_theta, camera_pos_phi)
+        camera_up = sphere2cart(camera_up_r, camera_up_theta, camera_up_phi)
+
+        # Scale to 1.5*max dimension and shift to middle of array
+        camera_pos = np.array(camera_pos)*1.5*max(scene_bound_data.shape) + np.array([scene_bound_data.shape[0] // 2, scene_bound_data.shape[1] // 2, scene_bound_data.shape[2] // 2])
+        camera_focal = np.array(camera_focal) + np.array([scene_bound_data.shape[0] // 2, scene_bound_data.shape[1] // 2, scene_bound_data.shape[2] // 2])
+
+        # Apply affine to translate into world coordinates
+        camera_pos = apply_affine(scene_bound_affine, camera_pos)
+        camera_focal = apply_affine(scene_bound_affine, camera_focal)
+
+        # Set camera
+        scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=camera_up)
+    else: 
+        scene.reset_camera()
         camera_pos, camera_focal, _ = scene.get_camera()
         view_up = (0, 1, 0)
 
@@ -311,9 +363,6 @@ def plot_nifti(
 
         scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=view_up)
 
-    else:
-        scene.reset_camera()
-
     # Show the scene
     if save_path:
         window.record(scene=scene, out_path=save_path, size=size, reset_camera=False)
@@ -321,7 +370,6 @@ def plot_nifti(
     if interactive:
         window.show(scene, size=size, reset_camera=False)
 
-@line_profiler.profile
 def create_glass_brain(mask_nifti, resample_factor=2, smooth_sigma=2, dilation_iters=2, opacity=0.33):
     """Create a "glass brain" visualization from a binary mask.
 
