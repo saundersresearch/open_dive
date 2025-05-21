@@ -7,14 +7,26 @@ from open_dive.viz import plot_nifti
 
 def main():
     # Create args
-    parser = argparse.ArgumentParser(description="OpenDIVE (Open Diffusion Imaging Visualization for Everyone) is a command line interface tool for generating accessible, interpretable visualizations from diffusion MRI.")
-    
+    parser = argparse.ArgumentParser(
+        description="OpenDIVE (Open Diffusion Imaging Visualization for Everyone) is a command line interface tool for generating accessible, interpretable visualizations from diffusion MRI.",
+        epilog="If you use this tool in research, please cite the following: "
+        "Saunders, A.M., McMaster, E.M., Rorden, C., Jis, J.K., Sun, M., Sadriddinov, A., VanTilburg, L., Kim, M.E., Landman, B.A., and Schilling, K."
+        "OpenDIVE: Streamlining Tractography Visualization. Medical Imaging with Deep Learning - Short Papers, 2025. (https://openreview.net/pdf?id=EjqP4vHnHL)",
+    )
+
     scalar_group = parser.add_argument_group("Scalar options")
     tractography_group = parser.add_argument_group("Tractography options")
-    glyph_group = parser.add_argument_group("Diffusion glyph options (tensors and ODFs)")
+    glyph_group = parser.add_argument_group(
+        "Diffusion glyph options (tensors and ODFs)"
+    )
     window_group = parser.add_argument_group("Window options")
-    
-    scalar_group.add_argument("-n", "--nifti_path", type=Path, help="Path to scalar-valued NIFTI to plot. Can be 3D or 4D. If 4D, --volume_idx must be provided.")
+
+    scalar_group.add_argument(
+        "-n",
+        "--nifti_path",
+        type=Path,
+        help="Path to scalar-valued NIFTI to plot. Can be 3D or 4D. If 4D, --volume_idx must be provided.",
+    )
     scalar_group.add_argument(
         "-s",
         "--slice",
@@ -47,7 +59,7 @@ def main():
         "--scalar_colorbar",
         action="store_true",
         help="Whether to show a colorbar. Default is False",
-    )    
+    )
     scalar_group.add_argument(
         "--glass_brain",
         type=Path,
@@ -138,7 +150,6 @@ def main():
         default=None,
         help="Elevation angle of the view.",
     )
-
 
     args = parser.parse_args()
 
