@@ -26,4 +26,4 @@ Issues = "https://github.com/MASILab/open_dive/issues"
 
 
 [project.scripts]
-nifti2png = "open_dive.scripts.nifti2png:main"
+open-dive = "open_dive.scripts.run:main"
