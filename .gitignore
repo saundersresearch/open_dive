@@ -176,8 +176,3 @@ cython_debug/
 
 # Local scripts
 local/
-<<<<<<< HEAD
-.DS_Store
-=======
-.DS_Store
->>>>>>> 09b5fdd60f532f65c1eec47a2c26708da081fa3d
