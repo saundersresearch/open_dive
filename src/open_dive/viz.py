@@ -136,9 +136,12 @@ def plot_nifti(
     scene_bound_affine = None
 
     # If we have a NIFTI file, use it to get the bounds of the scene
-    scene_bound_nifti = nifti_path or tensor_path or odf_path or glass_brain_path
-    if scene_bound_nifti is not None:
-        data = nib.load(scene_bound_nifti).get_fdata()
+    scene_bound_nifti_path = nifti_path or tensor_path or odf_path or glass_brain_path
+    if scene_bound_nifti_path is not None:
+        scene_bound_nifti = nib.load(scene_bound_nifti_path)
+        data = scene_bound_nifti.get_fdata()
+        scene_bound_data = np.ones_like(data)
+        scene_bound_affine = scene_bound_nifti.affine
 
         # Get slice if not defined
         if orientation == "axial":
@@ -512,6 +515,7 @@ def _set_camera(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Set the camera position and orientation."""
     if scene_bound_data is not None:
+        print('here')
         camera_pos = np.array([0, 0, 1])
         camera_focal = np.array([0, 0, 0])
         camera_up = np.array([0, 1, 0])
@@ -559,6 +563,7 @@ def _set_camera(
             position=camera_pos, focal_point=camera_focal, view_up=camera_up
         )
     else:
+        print('there')
         scene.reset_camera()
         camera_pos, camera_focal, _ = scene.get_camera()
         view_up = (0, 1, 0)

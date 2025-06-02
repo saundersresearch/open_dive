@@ -10,7 +10,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="OpenDIVE (Open Diffusion Imaging Visualization for Everyone) is a command line interface tool for generating accessible, interpretable visualizations from diffusion MRI.",
         epilog="If you use this tool in research, please cite the following: "
-        "Saunders, A.M., McMaster, E.M., Rorden, C., Jis, J.K., Sun, M., Sadriddinov, A., VanTilburg, L., Kim, M.E., Landman, B.A., and Schilling, K."
+        "Saunders, A.M., McMaster, E.M., Rorden, C., Jis, J.K., Sun, M., Sadriddinov, A., VanTilburg, L., Kim, M.E., Landman, B.A., and Schilling, K. "
         "OpenDIVE: Streamlining Tractography Visualization. Medical Imaging with Deep Learning - Short Papers, 2025. (https://openreview.net/pdf?id=EjqP4vHnHL)",
     )
 
