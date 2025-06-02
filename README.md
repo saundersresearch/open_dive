@@ -11,7 +11,7 @@ Despite the prolific availability of software tools to visualize diffusion MRI d
 You can install the package using Python (3.10+):
 
 ```bash
-pip install git+https://github.com/MASILab/open_dive
+pip install open-dive
 ```
 
 ## Usage
@@ -43,7 +43,7 @@ Please see the [wiki](https://github.com/MASILab/open_dive/wiki) for documentati
 
 ## Contributing
 
-We welcome issues and pull requests! For details on contributing, please see [CONTRIBUTING.md](CONTRIBUTING.md).
+We welcome issues and pull requests! For details on contributing, please see [CONTRIBUTING.md](https://github.com/MASILab/open_dive/blob/main/CONTRIBUTING.md).
 
 ### Aims 
 

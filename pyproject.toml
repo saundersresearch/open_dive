@@ -26,3 +26,15 @@ Issues = "https://github.com/MASILab/open_dive/issues"
 
 [project.scripts]
 open-dive = "open_dive.scripts.run:main"
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple/"
+publish-url = "https://upload.pypi.org/legacy/"
+default = true
