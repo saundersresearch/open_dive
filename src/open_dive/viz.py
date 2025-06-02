@@ -1,28 +1,29 @@
+import os
+
+import cmcrameri
+import matplotlib.pyplot as plt
 import nibabel as nib
 import numpy as np
-from dipy.viz import window, actor
 import vtk
-import matplotlib.pyplot as plt
+from dipy.align.reslice import reslice
+from dipy.core.geometry import cart2sphere, sphere2cart
+from dipy.data import get_sphere
+from dipy.io.image import load_nifti
+from dipy.reconst.dti import decompose_tensor, from_lower_triangular
+from dipy.reconst.shm import calculate_max_order, sh_to_sf_matrix
+from dipy.viz import actor, window
 from fury.actor import (
-    slicer,
-    odf_slicer,
-    ellipsoid,
     _color_fa,
     _fa,
     contour_from_roi,
+    ellipsoid,
+    odf_slicer,
+    slicer,
 )
-from fury.utils import apply_affine
 from fury.lib import Actor
-from dipy.io.image import load_nifti
-from dipy.data import get_sphere
-from dipy.reconst.dti import from_lower_triangular, decompose_tensor
-from dipy.reconst.shm import calculate_max_order, sh_to_sf_matrix
-from dipy.core.geometry import sphere2cart, cart2sphere
-from dipy.align.reslice import reslice
-from scipy.ndimage import gaussian_filter, binary_dilation
+from fury.utils import apply_affine
 from matplotlib.colors import Colormap
-import cmcrameri
-import os
+from scipy.ndimage import binary_dilation, gaussian_filter
 
 
 def plot_nifti(
@@ -122,9 +123,7 @@ def plot_nifti(
         tractography_cmap = "Set1" if tractography_values is None else "plasma"
     if tractography_cmap_range is None:
         tractography_cmap_range = (
-            (0, 1)
-            if tractography_values is None
-            else (min(tractography_values), max(tractography_values))
+            (0, 1) if tractography_values is None else (min(tractography_values), max(tractography_values))
         )
     tractography_cbar_labels = tractography_values is not None
 
@@ -184,9 +183,7 @@ def plot_nifti(
 
         # Set to range
         if tractography_values is not None:
-            norm = plt.Normalize(
-                vmin=tractography_cmap_range[0], vmax=tractography_cmap_range[1]
-            )
+            norm = plt.Normalize(vmin=tractography_cmap_range[0], vmax=tractography_cmap_range[1])
             colors = [cmap(norm(val)) for val in tractography_values]
         else:
             colors = [cmap(i) for i in range(len(tractography_path))]
@@ -302,14 +299,10 @@ def _create_glass_brain_actor(
     mask_thres = (mask_smooth > 0.5).astype(np.uint8)
 
     # Step 4: Dilate the thresholded mask with 2 passes
-    mask_dilated = binary_dilation(mask_thres, iterations=dilation_iters).astype(
-        np.uint8
-    )
+    mask_dilated = binary_dilation(mask_thres, iterations=dilation_iters).astype(np.uint8)
 
     # Create a surface actor
-    glass_brain_actor = contour_from_roi(
-        mask_dilated, affine=new_affine, opacity=opacity, color=(0.5, 0.5, 0.5)
-    )
+    glass_brain_actor = contour_from_roi(mask_dilated, affine=new_affine, opacity=opacity, color=(0.5, 0.5, 0.5))
     return glass_brain_actor
 
 
@@ -331,14 +324,10 @@ def _create_nifti_actor(
                 "Please provide a volume_idx parameter to select which 3D volume to display."
             )
         if not 0 <= volume_idx < data.shape[3]:
-            raise ValueError(
-                f"volume_idx {volume_idx} is out of bounds for image with {data.shape[3]} volumes"
-            )
+            raise ValueError(f"volume_idx {volume_idx} is out of bounds for image with {data.shape[3]} volumes")
         data = data[..., volume_idx]
     elif len(data.shape) != 3:
-        raise ValueError(
-            f"Expected 3D or 4D image, but got image with {len(data.shape)} dimensions"
-        )
+        raise ValueError(f"Expected 3D or 4D image, but got image with {len(data.shape)} dimensions")
 
     # Get the data and affine
     affine = nifti.affine
@@ -410,9 +399,7 @@ def _create_tractography_actor(
     for tract_file, color in zip(tractography_path, colors):
         streamlines_nifti = nib.streamlines.load(tract_file)
         streamlines = streamlines_nifti.streamlines
-        stream_actor = actor.line(
-            streamlines, colors=color, linewidth=0.2, opacity=tractography_opacity
-        )
+        stream_actor = actor.line(streamlines, colors=color, linewidth=0.2, opacity=tractography_opacity)
         stream_actors.append(stream_actor)
     return stream_actors
 
@@ -486,9 +473,7 @@ def _create_odf_actor(
     odf_data, odf_affine = load_nifti(odf_path)
     sphere = get_sphere(name="repulsion724")  # Use a precomputed sphere
     sh_order_max = calculate_max_order(odf_data.shape[-1])
-    B, _ = sh_to_sf_matrix(
-        sphere=sphere, sh_order_max=sh_order_max, basis_type=sh_basis
-    )
+    B, _ = sh_to_sf_matrix(sphere=sphere, sh_order_max=sh_order_max, basis_type=sh_basis)
     odf_actor = odf_slicer(
         odf_data,
         sphere=sphere,
@@ -515,7 +500,6 @@ def _set_camera(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Set the camera position and orientation."""
     if scene_bound_data is not None:
-        print('here')
         camera_pos = np.array([0, 0, 1])
         camera_focal = np.array([0, 0, 0])
         camera_up = np.array([0, 1, 0])
@@ -537,9 +521,7 @@ def _set_camera(
         camera_up = sphere2cart(camera_up_r, camera_up_theta, camera_up_phi)
 
         # Scale to 1.5*max dimension and shift to middle of array
-        camera_pos = np.array(camera_pos) * 1.5 * max(
-            scene_bound_data.shape
-        ) + np.array(
+        camera_pos = np.array(camera_pos) * 1.5 * max(scene_bound_data.shape) + np.array(
             [
                 scene_bound_data.shape[0] // 2,
                 scene_bound_data.shape[1] // 2,
@@ -559,11 +541,8 @@ def _set_camera(
         camera_focal = apply_affine(scene_bound_affine, camera_focal)
 
         # Set camera
-        scene.set_camera(
-            position=camera_pos, focal_point=camera_focal, view_up=camera_up
-        )
+        scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=camera_up)
     else:
-        print('there')
         scene.reset_camera()
         camera_pos, camera_focal, _ = scene.get_camera()
         view_up = (0, 1, 0)
