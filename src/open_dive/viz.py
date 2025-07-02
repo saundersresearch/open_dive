@@ -38,7 +38,7 @@ def plot_nifti(
     headless: bool = False,
     scalar_colorbar: bool = True,
     tractography_path: list[os.PathLike] | None = None,
-    tractography_opacity: float = 0.6,
+    tractography_opacity: list[float] | None = [0.6],
     tractography_values: list[float] | None = None,
     tractography_cmap: str | None = None,
     tractography_cmap_range: tuple[int, int] | None = None,
@@ -77,7 +77,7 @@ def plot_nifti(
         Whether to show a scalar colorbar (for FA, T1, etc.)
     tractography_path : list of os.Pathlike, optional
         Optional tractogram(s) to plot with slices. Can provide multiple files
-    tractography_opacity : float, default 0.6
+    tractography_opacity : list of float, default [0.6]
         Optional opacity value for tractograms between (0, 1)
     tractography_values : list of float, optional
         Optional values to color the tractography with
@@ -124,7 +124,7 @@ def plot_nifti(
     if tractography_cmap_range is None:
         tractography_cmap_range = (
             (0, 1) if tractography_values is None else (min(tractography_values), max(tractography_values))
-        )
+        )   
     tractography_cbar_labels = tractography_values is not None
 
     # Set up scene and bounds
@@ -390,16 +390,17 @@ def _create_colorbar_actor(
 def _create_tractography_actor(
     tractography_path: list[os.PathLike],
     colors: list[tuple[float, float, float]],
-    tractography_opacity: float = 0.6,
+    tractography_opacity: list[float] = [0.6],
 ) -> list[Actor]:
     """Create tractography actors from a list of NIFTI files."""
 
     # Loop over each tractography file and create an actor
     stream_actors = []
-    for tract_file, color in zip(tractography_path, colors):
+    tractography_opacity = tractography_opacity * len(tractography_path) if len(tractography_opacity) == 1 else tractography_opacity
+    for i, (tract_file, color) in enumerate(zip(tractography_path, colors)):
         streamlines_nifti = nib.streamlines.load(tract_file)
-        streamlines = streamlines_nifti.streamlines
-        stream_actor = actor.line(streamlines, colors=color, linewidth=0.2, opacity=tractography_opacity)
+        streamlines = streamlines_nifti.streamlines 
+        stream_actor = actor.line(streamlines, colors=color, linewidth=0.2, opacity=tractography_opacity[i])
         stream_actors.append(stream_actor)
     return stream_actors
 

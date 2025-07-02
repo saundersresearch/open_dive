@@ -92,8 +92,9 @@ def main():
     tractography_group.add_argument(
         "--tractography_opacity",
         type=float,
-        default=0.6,
-        help="Value to use for the tractogram opacity in range (0, 1]. Default is 0.6.",
+        nargs="+",
+        default=[0.6],
+        help="Value to use for the tractogram opacity in range (0, 1]. If a list, each value corresponds to a tractogram in --tractography_path.  Default is 0.6.",
     )
     tractography_group.add_argument(
         "--tractography_colorbar",
