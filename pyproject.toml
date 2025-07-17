@@ -38,3 +38,6 @@ name = "pypi"
 url = "https://pypi.org/simple/"
 publish-url = "https://upload.pypi.org/legacy/"
 default = true
+
+[tools.setuptools.package-data]
+adam_utils = ["slant.txt"]

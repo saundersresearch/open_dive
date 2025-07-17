@@ -15,10 +15,9 @@ def main():
     )
 
     scalar_group = parser.add_argument_group("Scalar options")
+    overlay_group = parser.add_argument_group("Overlay options")
     tractography_group = parser.add_argument_group("Tractography options")
-    glyph_group = parser.add_argument_group(
-        "Diffusion glyph options (tensors and ODFs)"
-    )
+    glyph_group = parser.add_argument_group("Diffusion glyph options (tensors and ODFs)")
     window_group = parser.add_argument_group("Window options")
 
     scalar_group.add_argument(
@@ -46,6 +45,12 @@ def main():
         help="Value range to pass to slicer. Default is (min, max) of --nifti_path.",
     )
     scalar_group.add_argument(
+        "--opacity",
+        type=float,
+        default=1.0,
+        help="Opacity of the image, between 0 and 1. Default is 1.0.",
+    )
+    scalar_group.add_argument(
         "--volume_idx",
         type=int,
         help="4D index of --nifti_path to display. Must be provided if the image is 4D.",
@@ -64,6 +69,29 @@ def main():
         "--glass_brain",
         type=Path,
         help="Path to binary mask to generate a glass brain.",
+    )
+
+    overlay_group.add_argument(
+        "--overlay_path",
+        type=Path,
+        help="Path to overlay NIFTI to plot on top of --nifti_path.",
+    )
+    overlay_group.add_argument(
+        "--overlay_value_range",
+        type=int,
+        nargs=2,
+        help='Value range to pass to overlay. Ignored if --overlay_cmap is "slant". Default is (min, max) of --overlay_path.',
+    )
+    overlay_group.add_argument(
+        "--overlay_opacity",
+        type=float,
+        default=0.5,
+        help="Opacity of the overlay in range (0, 1]. Default is 0.5.",
+    )
+    overlay_group.add_argument(
+        "--overlay_cmap",
+        default="viridis",
+        help='Matplotlib or cmcrameri colormap to use for overlay. Use "slant" for SLANT lookup table. Default is "viridis".',
     )
 
     tractography_group.add_argument(
@@ -176,8 +204,13 @@ def main():
         save_path=args.save_path,
         headless=args.headless,
         value_range=args.value_range,
+        opacity=args.opacity,
         interpolation=args.interpolation,
         scalar_colorbar=args.scalar_colorbar,
+        overlay_path=args.overlay_path,
+        overlay_value_range=args.overlay_value_range,
+        overlay_opacity=args.overlay_opacity,
+        overlay_cmap=args.overlay_cmap,
         tractography_path=args.tractography_path,
         tractography_opacity=args.tractography_opacity,
         tractography_values=args.tractography_values,

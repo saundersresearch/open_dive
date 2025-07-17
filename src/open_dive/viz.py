@@ -22,6 +22,7 @@ from fury.actor import (
 )
 from fury.lib import Actor
 from fury.utils import apply_affine
+from fury.colormap import create_colormap
 from matplotlib.colors import Colormap
 from scipy.ndimage import binary_dilation, gaussian_filter
 
@@ -35,9 +36,14 @@ def plot_nifti(
     azimuth: float | None = None,
     elevation: float | None = None,
     value_range: tuple[int, int] | None = None,
+    opacity: float = 1.0,
     save_path: os.PathLike | None = None,
     headless: bool = False,
     scalar_colorbar: bool = True,
+    overlay_path: os.PathLike | None = None,
+    overlay_value_range: tuple[int, int] | None = None,
+    overlay_opacity: float = 0.5,
+    overlay_cmap: str | None = None,
     tractography_path: list[os.PathLike] | None = None,
     tractography_opacity: list[float] | None = [0.6],
     tractography_values: list[float] | None = None,
@@ -72,12 +78,22 @@ def plot_nifti(
         Elevation angle in degrees
     value_range: tuple of float, optional
         Range for color mapping of image, by default automatically selected
+    opacity : float, default 1.0
+        Opacity of the image, between 0 and 1
     save_path : os.PathLike, optional
         Optional path to save to
     headless : bool, default False
         If True, do not show an interactive window
     scalar_colorbar : bool, default True
         Whether to show a scalar colorbar (for FA, T1, etc.)
+    overlay_path : os.PathLike, optional
+        Optional path to an overlay NIFTI to plot on top of the image
+    overlay_value_range : tuple of float, optional
+        Range for color mapping of overlay, by default automatically selected
+    overlay_opacity : float, default 0.5
+        Opacity of the overlay, between 0 and 1
+    overlay_cmap : str, optional
+        Colormap to use for the overlay, by default "viridis"
     tractography_path : list of os.Pathlike, optional
         Optional tractogram(s) to plot with slices. Can provide multiple files
     tractography_opacity : list of float, default [0.6]
@@ -127,7 +143,7 @@ def plot_nifti(
     if tractography_cmap_range is None:
         tractography_cmap_range = (
             (0, 1) if tractography_values is None else (min(tractography_values), max(tractography_values))
-        )   
+        )
     tractography_cbar_labels = tractography_values is not None
 
     # Set up scene and bounds
@@ -146,9 +162,9 @@ def plot_nifti(
         scene_bound_data = np.ones_like(data)
         scene_bound_affine = scene_bound_nifti.affine
 
-        max_x = int(data.shape[0]*1.1)
-        max_y = int(data.shape[1]*1.1)
-        max_z = int(data.shape[2]*1.1)
+        max_x = int(data.shape[0] * 1.5)
+        max_y = int(data.shape[1] * 1.5)
+        max_z = int(data.shape[2] * 1.5)
 
         # Get slice if not defined
         if orientation == "axial":
@@ -171,10 +187,24 @@ def plot_nifti(
             nifti_path,
             volume_idx=volume_idx,
             value_range=value_range,
+            opacity=opacity,
+            cmap="gray",
             **kwargs,
         )
         scene.add(slice_actor)
         slice_actor.display_extent(*extent)
+
+    if overlay_path is not None:
+        overlay_actor = _create_nifti_actor(
+            overlay_path,
+            volume_idx=volume_idx,
+            value_range=overlay_value_range,
+            opacity=overlay_opacity,
+            cmap=overlay_cmap,
+            **kwargs,
+        )
+        scene.add(overlay_actor)
+        overlay_actor.display_extent(*extent)
 
     if scalar_colorbar:
         scalar_bar = _create_colorbar_actor(
@@ -321,6 +351,8 @@ def _create_nifti_actor(
     nifti_path: os.PathLike,
     volume_idx: int | None = None,
     value_range: tuple[int, int] | None = None,
+    opacity: float = 1.0,
+    cmap: Colormap = "gray",
     **kwargs,
 ) -> Actor:
     # Load the data and convert to RAS
@@ -344,11 +376,24 @@ def _create_nifti_actor(
     affine = nifti.affine
 
     # value range
-    if value_range is None:
+    if cmap == "slant":
+        value_range = [0, 256]
+    elif value_range is None:
         value_range = [np.min(data), np.max(data)]
 
+    # Create colormap
+    n_colors = 256
+    cmap = plt.get_cmap(cmap)
+    lut = vtk.vtkLookupTable()
+    lut.SetNumberOfTableValues(n_colors)
+    lut.SetRange(value_range[0], value_range[1])
+    lut.Build()
+    for i in range(n_colors):
+        r, g, b, _ = cmap(i / (n_colors - 1))
+        lut.SetTableValue(i, r, g, b, opacity)
+
     # Set up slicer and window
-    slice_actor = slicer(data, value_range=value_range, affine=affine, **kwargs)
+    slice_actor = slicer(data, value_range=value_range, affine=affine, lookup_colormap=lut, opacity=opacity, **kwargs)
     return slice_actor
 
 
@@ -407,10 +452,12 @@ def _create_tractography_actor(
 
     # Loop over each tractography file and create an actor
     stream_actors = []
-    tractography_opacity = tractography_opacity * len(tractography_path) if len(tractography_opacity) == 1 else tractography_opacity
+    tractography_opacity = (
+        tractography_opacity * len(tractography_path) if len(tractography_opacity) == 1 else tractography_opacity
+    )
     for i, (tract_file, color) in enumerate(zip(tractography_path, colors)):
         streamlines_nifti = nib.streamlines.load(tract_file)
-        streamlines = streamlines_nifti.streamlines 
+        streamlines = streamlines_nifti.streamlines
         stream_actor = actor.line(streamlines, colors=color, linewidth=0.2, opacity=tractography_opacity[i])
         stream_actors.append(stream_actor)
     return stream_actors
@@ -509,7 +556,7 @@ def _set_camera(
     elevation: float,
     scene_bound_data: np.ndarray | None = None,
     scene_bound_affine: np.ndarray | None = None,
-    zoom: float = 1.0
+    zoom: float = 1.0,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Set the camera position and orientation."""
     if scene_bound_data is not None:
