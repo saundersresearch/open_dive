@@ -131,6 +131,12 @@ def main():
         default=(600, 400),
         help="Size of window. Default is (600, 400).",
     )
+    window_group.add_argument(
+        "--zoom",
+        type=float,
+        default=1.0,
+        help="Zoom level for the view. Default is 1.0.",
+    )
     window_group.add_argument("--save_path", help="Optional path for saving the image.")
     window_group.add_argument(
         "--headless",
@@ -165,6 +171,7 @@ def main():
         data_slice=args.slice,
         orientation=args.orientation,
         size=args.size,
+        zoom=args.zoom,
         volume_idx=args.volume_idx,
         save_path=args.save_path,
         headless=args.headless,

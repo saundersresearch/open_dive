@@ -31,6 +31,7 @@ def plot_nifti(
     data_slice: str | int = "m",
     orientation: str = "axial",
     size: tuple[int, int] = (600, 400),
+    zoom: float = 1.0,
     azimuth: float | None = None,
     elevation: float | None = None,
     value_range: tuple[int, int] | None = None,
@@ -63,6 +64,8 @@ def plot_nifti(
         Can be "axial", "sagittal" or "coronal"
     size : tuple, default (600, 400)
         Size of window
+    zoom : float, default 1.0
+        Zoom level for the view
     azimuth : float, optional
         Azimuth angle in degrees
     elevation : float, optional
@@ -138,24 +141,29 @@ def plot_nifti(
     scene_bound_nifti_path = nifti_path or tensor_path or odf_path or glass_brain_path
     if scene_bound_nifti_path is not None:
         scene_bound_nifti = nib.load(scene_bound_nifti_path)
+        scene_bound_nifti = nib.as_closest_canonical(scene_bound_nifti)
         data = scene_bound_nifti.get_fdata()
         scene_bound_data = np.ones_like(data)
         scene_bound_affine = scene_bound_nifti.affine
 
+        max_x = int(data.shape[0]*1.1)
+        max_y = int(data.shape[1]*1.1)
+        max_z = int(data.shape[2]*1.1)
+
         # Get slice if not defined
         if orientation == "axial":
             data_slice = data.shape[2] // 2 if data_slice == "m" else data_slice
-            extent = (0, data.shape[0], 0, data.shape[1], data_slice, data_slice)
+            extent = (0, max_x, 0, max_y, data_slice, data_slice)
             offset = np.array([0, 0, scale])
 
         elif orientation == "coronal":
             data_slice = data.shape[1] // 2 if data_slice == "m" else data_slice
-            extent = (0, data.shape[0], data_slice, data_slice, 0, data.shape[2])
+            extent = (0, max_x, data_slice, data_slice, 0, max_z)
             offset = np.array([0, scale, 0])
 
         elif orientation == "sagittal":
             data_slice = data.shape[0] // 2 if data_slice == "m" else data_slice
-            extent = (data_slice, data_slice, 0, data.shape[1], 0, data.shape[2])
+            extent = (data_slice, data_slice, 0, max_y, 0, max_z)
             offset = np.array([scale, 0, 0])
 
     if nifti_path is not None:
@@ -236,6 +244,7 @@ def plot_nifti(
 
         if scene_bound_data is None:
             glass_brain = nib.load(glass_brain_path)
+            glass_brain = nib.as_closest_canonical(glass_brain)
             scene_bound_data = np.ones_like(glass_brain.get_fdata())
             scene_bound_affine = glass_brain.affine
 
@@ -245,6 +254,7 @@ def plot_nifti(
         elevation=elevation,
         scene_bound_data=scene_bound_data,
         scene_bound_affine=scene_bound_affine,
+        zoom=zoom,
     )
 
     # Show the scene
@@ -284,6 +294,7 @@ def _create_glass_brain_actor(
     """
     # Load the mask
     mask_nifti = nib.load(mask_nifti)
+    mask_nifti = nib.as_closest_canonical(mask_nifti)
     mask = mask_nifti.get_fdata()
     affine = mask_nifti.affine
     zooms = mask_nifti.header.get_zooms()[:3]
@@ -498,6 +509,7 @@ def _set_camera(
     elevation: float,
     scene_bound_data: np.ndarray | None = None,
     scene_bound_affine: np.ndarray | None = None,
+    zoom: float = 1.0
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Set the camera position and orientation."""
     if scene_bound_data is not None:
@@ -568,3 +580,4 @@ def _set_camera(
         view_up = np.array(view_up)
 
         scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=view_up)
+    scene.zoom(zoom)
