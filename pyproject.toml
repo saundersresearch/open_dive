@@ -40,7 +40,7 @@ publish-url = "https://upload.pypi.org/legacy/"
 default = true
 
 [tools.setuptools.package-data]
-adam_utils = ["slant.txt"]
+"open_dive" = ["slant.txt"]
 
 [tools.setuptools]
 include-package-data = true
