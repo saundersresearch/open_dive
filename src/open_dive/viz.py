@@ -201,6 +201,7 @@ def plot_nifti(
             value_range=overlay_value_range,
             opacity=overlay_opacity,
             cmap=overlay_cmap,
+            offset=offset*0.25,
             **kwargs,
         )
         scene.add(overlay_actor)
@@ -353,6 +354,7 @@ def _create_nifti_actor(
     value_range: tuple[int, int] | None = None,
     opacity: float = 1.0,
     cmap: Colormap = "gray",
+    offset: np.ndarray = np.array([0, 0, 0]),
     **kwargs,
 ) -> Actor:
     # Load the data and convert to RAS
@@ -394,6 +396,12 @@ def _create_nifti_actor(
 
     # Set up slicer and window
     slice_actor = slicer(data, value_range=value_range, affine=affine, lookup_colormap=lut, opacity=opacity, **kwargs)
+    
+    # Set offset 
+    position = slice_actor.GetPosition()
+    position += offset
+    slice_actor.SetPosition(position)
+
     return slice_actor
 
 
