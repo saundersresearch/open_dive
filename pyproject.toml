@@ -41,3 +41,6 @@ default = true
 
 [tools.setuptools.package-data]
 adam_utils = ["slant.txt"]
+
+[tools.setuptools]
+include-package-data = true
