@@ -202,6 +202,7 @@ def plot_nifti(
             opacity=overlay_opacity,
             cmap=overlay_cmap,
             offset=offset*0.25,
+            is_zero_background=True,
             **kwargs,
         )
         scene.add(overlay_actor)
@@ -355,6 +356,7 @@ def _create_nifti_actor(
     opacity: float = 1.0,
     cmap: Colormap = "gray",
     offset: np.ndarray = np.array([0, 0, 0]),
+    is_zero_background: bool = False,
     **kwargs,
 ) -> Actor:
     # Load the data and convert to RAS
@@ -390,7 +392,12 @@ def _create_nifti_actor(
     lut.SetNumberOfTableValues(n_colors)
     lut.SetRange(value_range[0], value_range[1])
     lut.Build()
-    for i in range(n_colors):
+    if is_zero_background:
+        lut.SetTableValue(0, 0, 0, 0, 0)
+        start_index = 1
+    else:
+        start_index = 0
+    for i in range(start_index, n_colors):
         r, g, b, _ = cmap(i / (n_colors - 1))
         lut.SetTableValue(i, r, g, b, opacity)
 
