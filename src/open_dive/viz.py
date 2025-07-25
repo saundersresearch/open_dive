@@ -26,7 +26,6 @@ from fury.colormap import create_colormap
 from matplotlib.colors import Colormap
 from scipy.ndimage import binary_dilation, gaussian_filter
 
-
 def plot_nifti(
     nifti_path: os.PathLike | None = None,
     data_slice: str | int = "m",
@@ -150,35 +149,33 @@ def plot_nifti(
     scene = window.Scene()
 
     # Variable to store size of things we are rendering
-    scene_bound_data = None
+    scene_bound_data_shape = None
     scene_bound_affine = None
 
     # If we have a NIFTI file, use it to get the bounds of the scene
     scene_bound_nifti_path = nifti_path or tensor_path or odf_path or glass_brain_path
     if scene_bound_nifti_path is not None:
         scene_bound_nifti = nib.load(scene_bound_nifti_path)
-        scene_bound_nifti = nib.as_closest_canonical(scene_bound_nifti)
-        data = scene_bound_nifti.get_fdata()
-        scene_bound_data = np.ones_like(data)
+        scene_bound_data_shape = scene_bound_nifti.shape
         scene_bound_affine = scene_bound_nifti.affine
 
-        max_x = int(data.shape[0] * 1.5)
-        max_y = int(data.shape[1] * 1.5)
-        max_z = int(data.shape[2] * 1.5)
+        max_x = int(scene_bound_data_shape[0] * 1.5)
+        max_y = int(scene_bound_data_shape[1] * 1.5)
+        max_z = int(scene_bound_data_shape[2] * 1.5)
 
         # Get slice if not defined
         if orientation == "axial":
-            data_slice = data.shape[2] // 2 if data_slice == "m" else data_slice
+            data_slice = scene_bound_data_shape[2] // 2 if data_slice == "m" else data_slice
             extent = (0, max_x, 0, max_y, data_slice, data_slice)
             offset = np.array([0, 0, scale])
 
         elif orientation == "coronal":
-            data_slice = data.shape[1] // 2 if data_slice == "m" else data_slice
+            data_slice = scene_bound_data_shape[1] // 2 if data_slice == "m" else data_slice
             extent = (0, max_x, data_slice, data_slice, 0, max_z)
             offset = np.array([0, scale, 0])
 
         elif orientation == "sagittal":
-            data_slice = data.shape[0] // 2 if data_slice == "m" else data_slice
+            data_slice = scene_bound_data_shape[0] // 2 if data_slice == "m" else data_slice
             extent = (data_slice, data_slice, 0, max_y, 0, max_z)
             offset = np.array([scale, 0, 0])
 
@@ -274,17 +271,16 @@ def plot_nifti(
         glass_brain_actor = _create_glass_brain_actor(glass_brain_path)
         scene.add(glass_brain_actor)
 
-        if scene_bound_data is None:
+        if scene_bound_data_shape is None:
             glass_brain = nib.load(glass_brain_path)
-            glass_brain = nib.as_closest_canonical(glass_brain)
-            scene_bound_data = np.ones_like(glass_brain.get_fdata())
+            scene_bound_data_shape = glass_brain.shape
             scene_bound_affine = glass_brain.affine
 
     _set_camera(
         scene=scene,
         azimuth=azimuth,
         elevation=elevation,
-        scene_bound_data=scene_bound_data,
+        scene_bound_data_shape=scene_bound_data_shape,
         scene_bound_affine=scene_bound_affine,
         zoom=zoom,
     )
@@ -326,7 +322,6 @@ def _create_glass_brain_actor(
     """
     # Load the mask
     mask_nifti = nib.load(mask_nifti)
-    mask_nifti = nib.as_closest_canonical(mask_nifti)
     mask = mask_nifti.get_fdata()
     affine = mask_nifti.affine
     zooms = mask_nifti.header.get_zooms()[:3]
@@ -348,7 +343,6 @@ def _create_glass_brain_actor(
     glass_brain_actor = contour_from_roi(mask_dilated, affine=new_affine, opacity=opacity, color=(0.5, 0.5, 0.5))
     return glass_brain_actor
 
-
 def _create_nifti_actor(
     nifti_path: os.PathLike,
     volume_idx: int | None = None,
@@ -361,20 +355,20 @@ def _create_nifti_actor(
 ) -> Actor:
     # Load the data and convert to RAS
     nifti = nib.load(nifti_path)
-    nifti = nib.as_closest_canonical(nifti)
-    data = nifti.get_fdata()
 
-    if len(data.shape) == 4:
+    if len(nifti.shape) == 4:
         if volume_idx is None:
             raise ValueError(
                 "Input is a 4D image but no volume index specified. "
                 "Please provide a volume_idx parameter to select which 3D volume to display."
             )
-        if not 0 <= volume_idx < data.shape[3]:
-            raise ValueError(f"volume_idx {volume_idx} is out of bounds for image with {data.shape[3]} volumes")
-        data = data[..., volume_idx]
-    elif len(data.shape) != 3:
-        raise ValueError(f"Expected 3D or 4D image, but got image with {len(data.shape)} dimensions")
+        if not 0 <= volume_idx < nifti.shape[3]:
+            raise ValueError(f"volume_idx {volume_idx} is out of bounds for image with {nifti.shape[3]} volumes")
+        data = nifti.dataobj[..., volume_idx]
+    elif len(nifti.shape) != 3:
+        raise ValueError(f"Expected 3D or 4D image, but got image with {len(nifti.shape)} dimensions")
+    else:
+        data = nifti.get_fdata()
 
     # Get the data and affine
     affine = nifti.affine
@@ -569,12 +563,12 @@ def _set_camera(
     scene: window.Scene,
     azimuth: float,
     elevation: float,
-    scene_bound_data: np.ndarray | None = None,
+    scene_bound_data_shape: np.ndarray | None = None,
     scene_bound_affine: np.ndarray | None = None,
     zoom: float = 1.0,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Set the camera position and orientation."""
-    if scene_bound_data is not None:
+    if scene_bound_data_shape is not None:
         camera_pos = np.array([0, 0, 1])
         camera_focal = np.array([0, 0, 0])
         camera_up = np.array([0, 1, 0])
@@ -596,18 +590,18 @@ def _set_camera(
         camera_up = sphere2cart(camera_up_r, camera_up_theta, camera_up_phi)
 
         # Scale to 1.5*max dimension and shift to middle of array
-        camera_pos = np.array(camera_pos) * 1.5 * max(scene_bound_data.shape) + np.array(
+        camera_pos = np.array(camera_pos) * 1.5 * max(scene_bound_data_shape) + np.array(
             [
-                scene_bound_data.shape[0] // 2,
-                scene_bound_data.shape[1] // 2,
-                scene_bound_data.shape[2] // 2,
+                scene_bound_data_shape[0] // 2,
+                scene_bound_data_shape[1] // 2,
+                scene_bound_data_shape[2] // 2,
             ]
         )
         camera_focal = np.array(camera_focal) + np.array(
             [
-                scene_bound_data.shape[0] // 2,
-                scene_bound_data.shape[1] // 2,
-                scene_bound_data.shape[2] // 2,
+                scene_bound_data_shape[0] // 2,
+                scene_bound_data_shape[1] // 2,
+                scene_bound_data_shape[2] // 2,
             ]
         )
 
