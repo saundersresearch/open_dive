@@ -38,3 +38,9 @@ name = "pypi"
 url = "https://pypi.org/simple/"
 publish-url = "https://upload.pypi.org/legacy/"
 default = true
+
+[tool.setuptools.package-data]
+"open_dive" = ["slant.txt"]
+
+[tool.setuptools]
+include-package-data = true

@@ -15,10 +15,9 @@ def main():
     )
 
     scalar_group = parser.add_argument_group("Scalar options")
+    overlay_group = parser.add_argument_group("Overlay options")
     tractography_group = parser.add_argument_group("Tractography options")
-    glyph_group = parser.add_argument_group(
-        "Diffusion glyph options (tensors and ODFs)"
-    )
+    glyph_group = parser.add_argument_group("Diffusion glyph options (tensors and ODFs)")
     window_group = parser.add_argument_group("Window options")
 
     scalar_group.add_argument(
@@ -46,6 +45,12 @@ def main():
         help="Value range to pass to slicer. Default is (min, max) of --nifti_path.",
     )
     scalar_group.add_argument(
+        "--opacity",
+        type=float,
+        default=1.0,
+        help="Opacity of the image, between 0 and 1. Default is 1.0.",
+    )
+    scalar_group.add_argument(
         "--volume_idx",
         type=int,
         help="4D index of --nifti_path to display. Must be provided if the image is 4D.",
@@ -66,6 +71,29 @@ def main():
         help="Path to binary mask to generate a glass brain.",
     )
 
+    overlay_group.add_argument(
+        "--overlay_path",
+        type=Path,
+        help="Path to overlay NIFTI to plot on top of --nifti_path.",
+    )
+    overlay_group.add_argument(
+        "--overlay_value_range",
+        type=int,
+        nargs=2,
+        help='Value range to pass to overlay. Ignored if --overlay_cmap is "slant". Default is (min, max) of --overlay_path.',
+    )
+    overlay_group.add_argument(
+        "--overlay_opacity",
+        type=float,
+        default=0.5,
+        help="Opacity of the overlay in range (0, 1]. Default is 0.5.",
+    )
+    overlay_group.add_argument(
+        "--overlay_cmap",
+        default="viridis",
+        help='Matplotlib or cmcrameri colormap to use for overlay. Use "slant" for SLANT lookup table. Default is "viridis".',
+    )
+
     tractography_group.add_argument(
         ## plot tractogram with slices
         "--tractography_path",
@@ -81,13 +109,18 @@ def main():
     )
     tractography_group.add_argument(
         "--tractography_cmap",
-        help='Matplotlib or cmcrameri colormap to use for tractography. Default is "plasma" if --tractography_values is provided, otherwise "Set1".',
+        help='Matplotlib or cmcrameri colormap to use for tractography. Use "rgb_standard" or "boys_standard" to color streamlines by orientation. Default is "plasma" if --tractography_values is provided, otherwise "Set1".',
     )
     tractography_group.add_argument(
         "--tractography_cmap_range",
         type=float,
         nargs=2,
         help="Range to use for the colormap. Default is (0, 1).",
+    )
+    tractography_group.add_argument(
+        "--tractography_color_by_endpoints",
+        action="store_true",
+        help='Whether to color by endpoints alone or by individual points when using colormaps "rgb_standard" or "boys_standard". Default is False.'
     )
     tractography_group.add_argument(
         "--tractography_opacity",
@@ -131,6 +164,12 @@ def main():
         default=(600, 400),
         help="Size of window. Default is (600, 400).",
     )
+    window_group.add_argument(
+        "--zoom",
+        type=float,
+        default=1.0,
+        help="Zoom level for the view. Values > 1 zoom in, values < 1 zoom out. Must be positive. Default is 1.0.",
+    )
     window_group.add_argument("--save_path", help="Optional path for saving the image.")
     window_group.add_argument(
         "--headless",
@@ -159,23 +198,33 @@ def main():
         parser.print_help()
         sys.exit(1)
 
+    if args.zoom <= 0:
+        parser.error("--zoom must be a positive value.")
+
     # Plot the NIFTI
     plot_nifti(
         nifti_path=args.nifti_path,
         data_slice=args.slice,
         orientation=args.orientation,
         size=args.size,
+        zoom=args.zoom,
         volume_idx=args.volume_idx,
         save_path=args.save_path,
         headless=args.headless,
         value_range=args.value_range,
+        opacity=args.opacity,
         interpolation=args.interpolation,
         scalar_colorbar=args.scalar_colorbar,
+        overlay_path=args.overlay_path,
+        overlay_value_range=args.overlay_value_range,
+        overlay_opacity=args.overlay_opacity,
+        overlay_cmap=args.overlay_cmap,
         tractography_path=args.tractography_path,
         tractography_opacity=args.tractography_opacity,
         tractography_values=args.tractography_values,
         tractography_cmap=args.tractography_cmap,
         tractography_cmap_range=args.tractography_cmap_range,
+        tractography_color_by_endpoints=args.tractography_color_by_endpoints,
         tractography_colorbar=args.tractography_colorbar,
         tensor_path=args.tensor_path,
         odf_path=args.odf_path,

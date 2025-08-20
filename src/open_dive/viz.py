@@ -22,26 +22,33 @@ from fury.actor import (
 )
 from fury.lib import Actor
 from fury.utils import apply_affine
+from fury.colormap import line_colors, orient2rgb, boys2rgb
 from matplotlib.colors import Colormap
 from scipy.ndimage import binary_dilation, gaussian_filter
-
 
 def plot_nifti(
     nifti_path: os.PathLike | None = None,
     data_slice: str | int = "m",
     orientation: str = "axial",
     size: tuple[int, int] = (600, 400),
+    zoom: float = 1.0,
     azimuth: float | None = None,
     elevation: float | None = None,
     value_range: tuple[int, int] | None = None,
+    opacity: float = 1.0,
     save_path: os.PathLike | None = None,
     headless: bool = False,
     scalar_colorbar: bool = True,
+    overlay_path: os.PathLike | None = None,
+    overlay_value_range: tuple[int, int] | None = None,
+    overlay_opacity: float = 0.5,
+    overlay_cmap: str | None = None,
     tractography_path: list[os.PathLike] | None = None,
     tractography_opacity: list[float] | None = [0.6],
     tractography_values: list[float] | None = None,
     tractography_cmap: str | None = None,
     tractography_cmap_range: tuple[int, int] | None = None,
+    tractography_color_by_endpoints: bool = False,
     tractography_colorbar: bool = False,
     volume_idx: int | None = None,
     tensor_path: os.PathLike | None = None,
@@ -63,18 +70,30 @@ def plot_nifti(
         Can be "axial", "sagittal" or "coronal"
     size : tuple, default (600, 400)
         Size of window
+    zoom : float, default 1.0
+        Zoom level for the view
     azimuth : float, optional
         Azimuth angle in degrees
     elevation : float, optional
         Elevation angle in degrees
     value_range: tuple of float, optional
         Range for color mapping of image, by default automatically selected
+    opacity : float, default 1.0
+        Opacity of the image, between 0 and 1
     save_path : os.PathLike, optional
         Optional path to save to
     headless : bool, default False
         If True, do not show an interactive window
     scalar_colorbar : bool, default True
         Whether to show a scalar colorbar (for FA, T1, etc.)
+    overlay_path : os.PathLike, optional
+        Optional path to an overlay NIFTI to plot on top of the image
+    overlay_value_range : tuple of float, optional
+        Range for color mapping of overlay, by default automatically selected
+    overlay_opacity : float, default 0.5
+        Opacity of the overlay, between 0 and 1
+    overlay_cmap : str, optional
+        Colormap to use for the overlay, by default "viridis"
     tractography_path : list of os.Pathlike, optional
         Optional tractogram(s) to plot with slices. Can provide multiple files
     tractography_opacity : list of float, default [0.6]
@@ -82,9 +101,11 @@ def plot_nifti(
     tractography_values : list of float, optional
         Optional values to color the tractography with
     tractography_cmap : str, default "Set1" or "plasma"
-        Optional colormap to use for the tractography, by default "Set1" if tractography_values, otherwise "plasma"
+        Optional colormap to use for the tractography, by default "Set1" if tractography_values, otherwise "plasma".
     tractography_cmap_range : tuple of float, default (0, 1) if tractography_values is not None
         Optional range to use for the colormap
+    tractography_color_by_endpoints : bool, default False
+        Whether to color by endpoints alone or by individual points when using colormaps "rgb_standard" or "boys_standard"
     tractography_colorbar : bool, default False
         Whether to show a colorbar for the tractography
     volume_idx : int, optional
@@ -124,38 +145,41 @@ def plot_nifti(
     if tractography_cmap_range is None:
         tractography_cmap_range = (
             (0, 1) if tractography_values is None else (min(tractography_values), max(tractography_values))
-        )   
+        )
     tractography_cbar_labels = tractography_values is not None
 
     # Set up scene and bounds
     scene = window.Scene()
 
     # Variable to store size of things we are rendering
-    scene_bound_data = None
+    scene_bound_data_shape = None
     scene_bound_affine = None
 
     # If we have a NIFTI file, use it to get the bounds of the scene
     scene_bound_nifti_path = nifti_path or tensor_path or odf_path or glass_brain_path
     if scene_bound_nifti_path is not None:
         scene_bound_nifti = nib.load(scene_bound_nifti_path)
-        data = scene_bound_nifti.get_fdata()
-        scene_bound_data = np.ones_like(data)
+        scene_bound_data_shape = scene_bound_nifti.shape
         scene_bound_affine = scene_bound_nifti.affine
+
+        max_x = int(scene_bound_data_shape[0] * 1.5)
+        max_y = int(scene_bound_data_shape[1] * 1.5)
+        max_z = int(scene_bound_data_shape[2] * 1.5)
 
         # Get slice if not defined
         if orientation == "axial":
-            data_slice = data.shape[2] // 2 if data_slice == "m" else data_slice
-            extent = (0, data.shape[0], 0, data.shape[1], data_slice, data_slice)
+            data_slice = scene_bound_data_shape[2] // 2 if data_slice == "m" else data_slice
+            extent = (0, max_x, 0, max_y, data_slice, data_slice)
             offset = np.array([0, 0, scale])
 
         elif orientation == "coronal":
-            data_slice = data.shape[1] // 2 if data_slice == "m" else data_slice
-            extent = (0, data.shape[0], data_slice, data_slice, 0, data.shape[2])
+            data_slice = scene_bound_data_shape[1] // 2 if data_slice == "m" else data_slice
+            extent = (0, max_x, data_slice, data_slice, 0, max_z)
             offset = np.array([0, scale, 0])
 
         elif orientation == "sagittal":
-            data_slice = data.shape[0] // 2 if data_slice == "m" else data_slice
-            extent = (data_slice, data_slice, 0, data.shape[1], 0, data.shape[2])
+            data_slice = scene_bound_data_shape[0] // 2 if data_slice == "m" else data_slice
+            extent = (data_slice, data_slice, 0, max_y, 0, max_z)
             offset = np.array([scale, 0, 0])
 
     if nifti_path is not None:
@@ -163,10 +187,26 @@ def plot_nifti(
             nifti_path,
             volume_idx=volume_idx,
             value_range=value_range,
+            opacity=opacity,
+            cmap="gray",
             **kwargs,
         )
         scene.add(slice_actor)
         slice_actor.display_extent(*extent)
+
+    if overlay_path is not None:
+        overlay_actor = _create_nifti_actor(
+            overlay_path,
+            volume_idx=volume_idx,
+            value_range=overlay_value_range,
+            opacity=overlay_opacity,
+            cmap=overlay_cmap,
+            offset=offset*0.25,
+            is_zero_background=True,
+            **kwargs,
+        )
+        scene.add(overlay_actor)
+        overlay_actor.display_extent(*extent)
 
     if scalar_colorbar:
         scalar_bar = _create_colorbar_actor(
@@ -179,32 +219,37 @@ def plot_nifti(
 
     # Add tractography
     if tractography_path is not None:
-        cmap = plt.get_cmap(tractography_cmap)
+        if tractography_cmap not in ["rgb_standard", "boys_standard"]:
+            cmap = plt.get_cmap(tractography_cmap)
 
-        # Set to range
-        if tractography_values is not None:
-            norm = plt.Normalize(vmin=tractography_cmap_range[0], vmax=tractography_cmap_range[1])
-            colors = [cmap(norm(val)) for val in tractography_values]
+            # Set to range
+            if tractography_values is not None:
+                norm = plt.Normalize(vmin=tractography_cmap_range[0], vmax=tractography_cmap_range[1])
+                colors = [cmap(norm(val)) for val in tractography_values]
+            else:
+                colors = [cmap(i) for i in range(len(tractography_path))]
+
+            # Apply colorbar
+            if tractography_colorbar:
+                tract_bar = _create_colorbar_actor(
+                    value_range=tractography_cmap_range,
+                    colorbar_position=(0.1, 0.1),
+                    colorbar_height=0.5,
+                    colorbar_width=0.1,
+                    cmap=cmap,
+                    labels=tractography_cbar_labels,
+                )
+                scene.add(tract_bar)
+
         else:
-            colors = [cmap(i) for i in range(len(tractography_path))]
-
-        # Apply colorbar
-        if tractography_colorbar:
-            tract_bar = _create_colorbar_actor(
-                value_range=tractography_cmap_range,
-                colorbar_position=(0.1, 0.1),
-                colorbar_height=0.5,
-                colorbar_width=0.1,
-                cmap=cmap,
-                labels=tractography_cbar_labels,
-            )
-            scene.add(tract_bar)
+            colors = tractography_cmap
 
         # Add each tractography with its corresponding color
         stream_actors = _create_tractography_actor(
             tractography_path,
             colors=colors,
             tractography_opacity=tractography_opacity,
+            tractography_color_by_endpoints=tractography_color_by_endpoints,
         )
         for stream_actor in stream_actors:
             scene.add(stream_actor)
@@ -234,17 +279,18 @@ def plot_nifti(
         glass_brain_actor = _create_glass_brain_actor(glass_brain_path)
         scene.add(glass_brain_actor)
 
-        if scene_bound_data is None:
+        if scene_bound_data_shape is None:
             glass_brain = nib.load(glass_brain_path)
-            scene_bound_data = np.ones_like(glass_brain.get_fdata())
+            scene_bound_data_shape = glass_brain.shape
             scene_bound_affine = glass_brain.affine
 
     _set_camera(
         scene=scene,
         azimuth=azimuth,
         elevation=elevation,
-        scene_bound_data=scene_bound_data,
+        scene_bound_data_shape=scene_bound_data_shape,
         scene_bound_affine=scene_bound_affine,
+        zoom=zoom,
     )
 
     # Show the scene
@@ -305,39 +351,66 @@ def _create_glass_brain_actor(
     glass_brain_actor = contour_from_roi(mask_dilated, affine=new_affine, opacity=opacity, color=(0.5, 0.5, 0.5))
     return glass_brain_actor
 
-
 def _create_nifti_actor(
     nifti_path: os.PathLike,
     volume_idx: int | None = None,
     value_range: tuple[int, int] | None = None,
+    opacity: float = 1.0,
+    cmap: Colormap = "gray",
+    offset: np.ndarray = np.array([0, 0, 0]),
+    is_zero_background: bool = False,
     **kwargs,
 ) -> Actor:
     # Load the data and convert to RAS
     nifti = nib.load(nifti_path)
-    nifti = nib.as_closest_canonical(nifti)
-    data = nifti.get_fdata()
 
-    if len(data.shape) == 4:
+    if len(nifti.shape) == 4:
         if volume_idx is None:
             raise ValueError(
                 "Input is a 4D image but no volume index specified. "
                 "Please provide a volume_idx parameter to select which 3D volume to display."
             )
-        if not 0 <= volume_idx < data.shape[3]:
-            raise ValueError(f"volume_idx {volume_idx} is out of bounds for image with {data.shape[3]} volumes")
-        data = data[..., volume_idx]
-    elif len(data.shape) != 3:
-        raise ValueError(f"Expected 3D or 4D image, but got image with {len(data.shape)} dimensions")
+        if not 0 <= volume_idx < nifti.shape[3]:
+            raise ValueError(f"volume_idx {volume_idx} is out of bounds for image with {nifti.shape[3]} volumes")
+        data = nifti.dataobj[..., volume_idx]
+    elif len(nifti.shape) != 3:
+        raise ValueError(f"Expected 3D or 4D image, but got image with {len(nifti.shape)} dimensions")
+    else:
+        data = nifti.get_fdata()
 
     # Get the data and affine
     affine = nifti.affine
 
     # value range
-    if value_range is None:
+    if cmap == "slant":
+        value_range = [0, 256]
+    elif value_range is None:
         value_range = [np.min(data), np.max(data)]
 
+    # Create colormap
+    n_colors = 256
+    cmap = plt.get_cmap(cmap)
+    lut = vtk.vtkLookupTable()
+    lut.SetNumberOfTableValues(n_colors)
+    lut.SetRange(value_range[0], value_range[1])
+    lut.Build()
+    if is_zero_background:
+        lut.SetTableValue(0, 0, 0, 0, 0)
+        start_index = 1
+    else:
+        start_index = 0
+    for i in range(start_index, n_colors):
+        r, g, b, _ = cmap(i / (n_colors - 1))
+        lut.SetTableValue(i, r, g, b, opacity)
+
     # Set up slicer and window
-    slice_actor = slicer(data, value_range=value_range, affine=affine, **kwargs)
+    slice_actor = slicer(data, value_range=value_range, affine=affine, lookup_colormap=lut, opacity=opacity, **kwargs)
+    
+    # Set offset 
+    position = slice_actor.GetPosition()
+    position += offset
+    slice_actor.SetPosition(position)
+
     return slice_actor
 
 
@@ -389,19 +462,42 @@ def _create_colorbar_actor(
 
 def _create_tractography_actor(
     tractography_path: list[os.PathLike],
-    colors: list[tuple[float, float, float]],
+    colors: list[tuple[float, float, float]] | str,
     tractography_opacity: list[float] = [0.6],
+    tractography_color_by_endpoints: bool = False,
 ) -> list[Actor]:
-    """Create tractography actors from a list of NIFTI files."""
+    """Create tractography actors from a list of files."""
 
     # Loop over each tractography file and create an actor
     stream_actors = []
-    tractography_opacity = tractography_opacity * len(tractography_path) if len(tractography_opacity) == 1 else tractography_opacity
-    for i, (tract_file, color) in enumerate(zip(tractography_path, colors)):
-        streamlines_nifti = nib.streamlines.load(tract_file)
-        streamlines = streamlines_nifti.streamlines 
-        stream_actor = actor.line(streamlines, colors=color, linewidth=0.2, opacity=tractography_opacity[i])
-        stream_actors.append(stream_actor)
+    tractography_opacity = (
+        tractography_opacity * len(tractography_path) if len(tractography_opacity) == 1 else tractography_opacity
+    )
+    if colors in ["rgb_standard", "boys_standard"]:
+        for i, tract_file in enumerate(tractography_path):
+            streamlines_nifti = nib.streamlines.load(tract_file)
+            streamlines = streamlines_nifti.streamlines
+
+            if tractography_color_by_endpoints:
+                streamlines_colors = line_colors(streamlines, cmap=colors)
+            else:
+                # Color each point in streamlines based on orientation
+                streamlines_diff = [np.diff(streamline, axis=0, prepend=streamline[0:1,:]) for streamline in streamlines]
+                streamlines_diff = [diff / (1e-8 + np.linalg.norm(diff, axis=1, keepdims=True)) for diff in streamlines_diff]
+                if colors == "rgb_standard":
+                    streamlines_colors = [orient2rgb(streamline_diff) for streamline_diff in streamlines_diff]
+                elif colors == "boys_standard":
+                    streamlines_colors = [boys2rgb(streamline_diff) for streamline_diff in streamlines_diff]
+                streamlines_colors = np.concatenate(streamlines_colors, axis=0)
+
+            stream_actor = actor.line(streamlines, colors=streamlines_colors, linewidth=0.2, opacity=tractography_opacity[i])
+            stream_actors.append(stream_actor)
+    else:
+        for i, (tract_file, color) in enumerate(zip(tractography_path, colors)):
+            streamlines_nifti = nib.streamlines.load(tract_file)
+            streamlines = streamlines_nifti.streamlines
+            stream_actor = actor.line(streamlines, colors=color, linewidth=0.2, opacity=tractography_opacity[i])
+            stream_actors.append(stream_actor)
     return stream_actors
 
 
@@ -496,11 +592,12 @@ def _set_camera(
     scene: window.Scene,
     azimuth: float,
     elevation: float,
-    scene_bound_data: np.ndarray | None = None,
+    scene_bound_data_shape: np.ndarray | None = None,
     scene_bound_affine: np.ndarray | None = None,
+    zoom: float = 1.0,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Set the camera position and orientation."""
-    if scene_bound_data is not None:
+    if scene_bound_data_shape is not None:
         camera_pos = np.array([0, 0, 1])
         camera_focal = np.array([0, 0, 0])
         camera_up = np.array([0, 1, 0])
@@ -522,18 +619,18 @@ def _set_camera(
         camera_up = sphere2cart(camera_up_r, camera_up_theta, camera_up_phi)
 
         # Scale to 1.5*max dimension and shift to middle of array
-        camera_pos = np.array(camera_pos) * 1.5 * max(scene_bound_data.shape) + np.array(
+        camera_pos = np.array(camera_pos) * 1.5 * max(scene_bound_data_shape) + np.array(
             [
-                scene_bound_data.shape[0] // 2,
-                scene_bound_data.shape[1] // 2,
-                scene_bound_data.shape[2] // 2,
+                scene_bound_data_shape[0] // 2,
+                scene_bound_data_shape[1] // 2,
+                scene_bound_data_shape[2] // 2,
             ]
         )
         camera_focal = np.array(camera_focal) + np.array(
             [
-                scene_bound_data.shape[0] // 2,
-                scene_bound_data.shape[1] // 2,
-                scene_bound_data.shape[2] // 2,
+                scene_bound_data_shape[0] // 2,
+                scene_bound_data_shape[1] // 2,
+                scene_bound_data_shape[2] // 2,
             ]
         )
 
@@ -568,3 +665,4 @@ def _set_camera(
         view_up = np.array(view_up)
 
         scene.set_camera(position=camera_pos, focal_point=camera_focal, view_up=view_up)
+    scene.zoom(zoom)
