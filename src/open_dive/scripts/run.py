@@ -109,13 +109,18 @@ def main():
     )
     tractography_group.add_argument(
         "--tractography_cmap",
-        help='Matplotlib or cmcrameri colormap to use for tractography. Default is "plasma" if --tractography_values is provided, otherwise "Set1".',
+        help='Matplotlib or cmcrameri colormap to use for tractography. Use "rgb_standard" or "boys_standard" to color streamlines by orientation. Default is "plasma" if --tractography_values is provided, otherwise "Set1".',
     )
     tractography_group.add_argument(
         "--tractography_cmap_range",
         type=float,
         nargs=2,
         help="Range to use for the colormap. Default is (0, 1).",
+    )
+    tractography_group.add_argument(
+        "--tractography_color_by_endpoints",
+        action="store_true",
+        help='Whether to color by endpoints alone or by individual points when using colormaps "rgb_standard" or "boys_standard". Default is False.'
     )
     tractography_group.add_argument(
         "--tractography_opacity",
@@ -163,7 +168,7 @@ def main():
         "--zoom",
         type=float,
         default=1.0,
-        help="Zoom level for the view. Default is 1.0.",
+        help="Zoom level for the view. Values > 1 zoom in, values < 1 zoom out. Must be positive. Default is 1.0.",
     )
     window_group.add_argument("--save_path", help="Optional path for saving the image.")
     window_group.add_argument(
@@ -193,6 +198,9 @@ def main():
         parser.print_help()
         sys.exit(1)
 
+    if args.zoom <= 0:
+        parser.error("--zoom must be a positive value.")
+
     # Plot the NIFTI
     plot_nifti(
         nifti_path=args.nifti_path,
@@ -216,6 +224,7 @@ def main():
         tractography_values=args.tractography_values,
         tractography_cmap=args.tractography_cmap,
         tractography_cmap_range=args.tractography_cmap_range,
+        tractography_color_by_endpoints=args.tractography_color_by_endpoints,
         tractography_colorbar=args.tractography_colorbar,
         tensor_path=args.tensor_path,
         odf_path=args.odf_path,
